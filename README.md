@@ -22,7 +22,7 @@ First flashable build of the new UI: the screen framework (lanes, key band, per-
 | `patches/circle/` | Circle patch (ST7789 170x320 row offset) |
 | `patches/minidexed/` | MiniDexed hooks (ini keys, serial MIDI switch, UI hand-over, meters) |
 | `config/minidexed.ini` | Settings for the ZicPixel |
-| `sysex/voice/` | Extra voice banks (`000000_nasty.syx`: 32 DnB/electro patches) |
+| `sysex/voice/` | Extra voice banks (`000001_nasty.syx`: 32 DnB/electro patches) |
 | `tools/` | `fontgen.py` (Inter to bitmaps), `mockups/` (design renders), `sim/` (PC simulator), `nasty_makebank.py` |
 | `tests/ui/` | Host tests: `make -C tests/ui test` |
 
