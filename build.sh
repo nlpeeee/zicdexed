@@ -66,4 +66,14 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 cp src/kernel8.img "$OUT"/
 cp "$ROOT"/config/minidexed.ini "$OUT"/
 cp -r "$ROOT"/sysex "$OUT"/
+
+# WiFi: Pi Zero 2 W firmware blobs (downloaded by Circle's own Makefile) and a
+# wpa_supplicant.conf template. Skip the download with WIFI_FIRMWARE=0.
+cp "$ROOT"/config/wpa_supplicant.conf.example "$OUT"/
+if [ "${WIFI_FIRMWARE:-1}" = 1 ]; then
+	mkdir -p "$OUT"/firmware
+	(cd "$OUT"/firmware && make -f "$SRC"/circle-stdlib/libs/circle/addon/wlan/firmware/Makefile) \
+		|| echo "WiFi firmware download failed; see docs/wifi.md"
+fi
 echo "SD card overlay ready in $OUT"
+echo "Copy wpa_supplicant.conf.example to wpa_supplicant.conf on the card and set your network (docs/wifi.md)"
