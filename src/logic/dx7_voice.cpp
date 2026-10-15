@@ -81,50 +81,64 @@ Voice Voice::Init()
 	return v;
 }
 
-// Carrier sets per DX7 algorithm (OP1 = bit 0) and the operator with the
-// feedback loop. Carrier counts per algorithm are checked in the tests:
-// 2 2 2 2 3 3 2 2 2 2 2 2 2 2 2 1 1 1 3 3 4 4 4 5 5 3 3 3 4 4 5 6.
-static constexpr uint8_t B(int op) { return (uint8_t)(1u << (op - 1)); }
-static const AlgInfo kAlgs[32] = {
-	{ uint8_t(B(1) | B(3)), 5 },                              //  1
-	{ uint8_t(B(1) | B(3)), 1 },                              //  2
-	{ uint8_t(B(1) | B(4)), 5 },                              //  3
-	{ uint8_t(B(1) | B(4)), 5 },                              //  4 (feedback crosses 4-5-6)
-	{ uint8_t(B(1) | B(3) | B(5)), 5 },                       //  5
-	{ uint8_t(B(1) | B(3) | B(5)), 5 },                       //  6 (feedback crosses 5-6)
-	{ uint8_t(B(1) | B(3)), 5 },                              //  7
-	{ uint8_t(B(1) | B(3)), 3 },                              //  8
-	{ uint8_t(B(1) | B(3)), 1 },                              //  9
-	{ uint8_t(B(1) | B(4)), 2 },                              // 10
-	{ uint8_t(B(1) | B(4)), 5 },                              // 11
-	{ uint8_t(B(1) | B(3)), 1 },                              // 12
-	{ uint8_t(B(1) | B(3)), 5 },                              // 13
-	{ uint8_t(B(1) | B(3)), 5 },                              // 14
-	{ uint8_t(B(1) | B(3)), 1 },                              // 15
-	{ uint8_t(B(1)), 5 },                                     // 16
-	{ uint8_t(B(1)), 1 },                                     // 17
-	{ uint8_t(B(1)), 2 },                                     // 18
-	{ uint8_t(B(1) | B(4) | B(5)), 5 },                       // 19
-	{ uint8_t(B(1) | B(2) | B(4)), 2 },                       // 20
-	{ uint8_t(B(1) | B(2) | B(4) | B(5)), 5 },                // 21
-	{ uint8_t(B(1) | B(3) | B(4) | B(5)), 5 },                // 22
-	{ uint8_t(B(1) | B(2) | B(4) | B(5)), 5 },                // 23
-	{ uint8_t(B(1) | B(2) | B(3) | B(4) | B(5)), 5 },         // 24
-	{ uint8_t(B(1) | B(2) | B(3) | B(4) | B(5)), 5 },         // 25
-	{ uint8_t(B(1) | B(2) | B(4)), 5 },                       // 26
-	{ uint8_t(B(1) | B(2) | B(4)), 2 },                       // 27
-	{ uint8_t(B(1) | B(3) | B(6)), 4 },                       // 28
-	{ uint8_t(B(1) | B(2) | B(3) | B(5)), 5 },                // 29
-	{ uint8_t(B(1) | B(2) | B(3) | B(6)), 4 },                // 30
-	{ uint8_t(B(1) | B(2) | B(3) | B(4) | B(5)), 5 },         // 31
-	{ uint8_t(B(1) | B(2) | B(3) | B(4) | B(5) | B(6)), 5 },  // 32
+// The 32 DX7 algorithms as the Dexed/MSFA engine encodes them (Synth_Dexed
+// fm_core.cpp, Apache-2.0, originally Google music-synthesizer-for-android).
+// Entry i is processed in order, so entry 0 is OP6 and entry 5 is OP1.
+// Bits: 0..1 output bus (0 = main output), 2 add (to the bus, or to the output
+// when the bus is 0), 4..5 input bus, 6 feedback in, 7 feedback out.
+static const uint8_t kEngine[32][6] = {
+	{ 0xc1, 0x11, 0x11, 0x14, 0x01, 0x14 }, { 0x01, 0x11, 0x11, 0x14, 0xc1, 0x14 },
+	{ 0xc1, 0x11, 0x14, 0x01, 0x11, 0x14 }, { 0xc1, 0x11, 0x94, 0x01, 0x11, 0x14 },
+	{ 0xc1, 0x14, 0x01, 0x14, 0x01, 0x14 }, { 0xc1, 0x94, 0x01, 0x14, 0x01, 0x14 },
+	{ 0xc1, 0x11, 0x05, 0x14, 0x01, 0x14 }, { 0x01, 0x11, 0xc5, 0x14, 0x01, 0x14 },
+	{ 0x01, 0x11, 0x05, 0x14, 0xc1, 0x14 }, { 0x01, 0x05, 0x14, 0xc1, 0x11, 0x14 },
+	{ 0xc1, 0x05, 0x14, 0x01, 0x11, 0x14 }, { 0x01, 0x05, 0x05, 0x14, 0xc1, 0x14 },
+	{ 0xc1, 0x05, 0x05, 0x14, 0x01, 0x14 }, { 0xc1, 0x05, 0x11, 0x14, 0x01, 0x14 },
+	{ 0x01, 0x05, 0x11, 0x14, 0xc1, 0x14 }, { 0xc1, 0x11, 0x02, 0x25, 0x05, 0x14 },
+	{ 0x01, 0x11, 0x02, 0x25, 0xc5, 0x14 }, { 0x01, 0x11, 0x11, 0xc5, 0x05, 0x14 },
+	{ 0xc1, 0x14, 0x14, 0x01, 0x11, 0x14 }, { 0x01, 0x05, 0x14, 0xc1, 0x14, 0x14 },
+	{ 0x01, 0x14, 0x14, 0xc1, 0x14, 0x14 }, { 0xc1, 0x14, 0x14, 0x14, 0x01, 0x14 },
+	{ 0xc1, 0x14, 0x14, 0x01, 0x14, 0x04 }, { 0xc1, 0x14, 0x14, 0x14, 0x04, 0x04 },
+	{ 0xc1, 0x14, 0x14, 0x04, 0x04, 0x04 }, { 0xc1, 0x05, 0x14, 0x01, 0x14, 0x04 },
+	{ 0x01, 0x05, 0x14, 0xc1, 0x14, 0x04 }, { 0x04, 0xc1, 0x11, 0x14, 0x01, 0x14 },
+	{ 0xc1, 0x14, 0x01, 0x14, 0x04, 0x04 }, { 0x04, 0xc1, 0x11, 0x14, 0x04, 0x04 },
+	{ 0xc1, 0x14, 0x04, 0x04, 0x04, 0x04 }, { 0xc4, 0x04, 0x04, 0x04, 0x04, 0x04 },
 };
+
+static AlgInfo gAlgs[32];
+static bool gAlgsBuilt = false;
+
+static void BuildAlgorithms()
+{
+	for (int a = 0; a < 32; a++) {
+		AlgInfo& r = gAlgs[a];
+		memset(&r, 0, sizeof r);
+		uint8_t contrib[3] = { 0, 0, 0 }; // ops currently writing each bus
+		for (int i = 0; i < kOps; i++) {
+			const int op = kOps - 1 - i; // 0-based op number (OP1 = 0)
+			const uint8_t f = kEngine[a][i];
+			const int in = (f >> 4) & 3, out = f & 3;
+			if (in) r.mods[op] = contrib[in];
+			if (out == 0) {
+				if (f & 4) r.carrierMask |= (uint8_t)(1u << op);
+			} else if (f & 4) {
+				contrib[out] |= (uint8_t)(1u << op); // adds to what is already on the bus
+			} else {
+				contrib[out] = (uint8_t)(1u << op);  // replaces it
+			}
+			if (f & 0x40) r.feedbackOp = (uint8_t)op;
+			if (f & 0x80) r.feedbackOut = (uint8_t)op;
+		}
+	}
+	gAlgsBuilt = true;
+}
 
 const AlgInfo& Algorithm(int alg)
 {
 	if (alg < 0) alg = 0;
 	if (alg > 31) alg = 31;
-	return kAlgs[alg];
+	if (!gAlgsBuilt) BuildAlgorithms();
+	return gAlgs[alg];
 }
 
 int CarrierCount(int alg)

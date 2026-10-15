@@ -3,6 +3,7 @@
 #include <string.h>
 #include "../src/logic/page_model.h"
 #include "../src/logic/shift_map.h"
+#include "../src/logic/alg_layout.h"
 
 using namespace zd;
 
@@ -38,6 +39,19 @@ static void test_voice()
 	for (int a = 0; a < 32; a++) CHECK(Algorithm(a).feedbackOp < 6);
 	for (int a = 0; a < 32; a++) CHECK(IsCarrier(a, 0)); // OP1 is always a carrier
 
+	// topology spot checks (0-based ops: OP3 = 2)
+	CHECK(Algorithm(6).mods[2] == ((1 << 3) | (1 << 4)) && Algorithm(6).mods[4] == (1 << 5) && Algorithm(6).mods[0] == (1 << 1));
+	CHECK(Algorithm(15).mods[0] == ((1 << 1) | (1 << 2) | (1 << 4)) && Algorithm(15).mods[2] == (1 << 3));
+	CHECK(Algorithm(17).mods[0] == ((1 << 1) | (1 << 2) | (1 << 3)) && Algorithm(17).feedbackOp == 2);
+	CHECK(Algorithm(3).feedbackOp == 5 && Algorithm(3).feedbackOut == 3 && Algorithm(0).feedbackOut == 5);
+	for (int a = 0; a < 32; a++) { // carriers modulate nobody, every other op feeds something
+		for (int o = 0; o < 6; o++) {
+			int users = 0;
+			for (int t = 0; t < 6; t++) if (Algorithm(a).mods[t] & (1 << o)) users++;
+			if (IsCarrier(a, o)) CHECK(users == 0);
+			else CHECK(users >= 1);
+		}
+	}
 	Voice v = Voice::Init();
 	CHECK(OpOff(5, OP_R1) == 0);          // OP6 first in the dump
 	CHECK(OpOff(0, OP_PD) == 5 * 21 + 20);
@@ -54,6 +68,27 @@ static void test_voice()
 	char n[11]; Voice::Init().name(n);
 	CHECK(strcmp(n, "INIT VOICE") == 0);
 	for (int off = 0; off < kVoiceSize; off++) { Voice t = Voice::Init(); t.set(off, 100000); CHECK(t.d[off] <= ParamMax(off) || off >= G_NAME); }
+}
+
+static void test_layout()
+{
+	for (int a = 0; a < 32; a++) {
+		AlgLayout l; LayoutAlgorithm(a, l);
+		CHECK(l.rows >= 1 && l.rows <= 4 && l.cols >= 1 && l.cols <= 6.01f);
+		for (int o = 0; o < 6; o++) {
+			CHECK(l.node[o].x >= 0 && l.node[o].x + 1 <= l.cols + 0.001f);
+			CHECK(l.node[o].row >= 0 && l.node[o].row < l.rows);
+			if (IsCarrier(a, o)) CHECK(l.node[o].row == l.rows - 1);
+			for (int t = 0; t < 6; t++) // a modulator sits above what it modulates
+				if (Algorithm(a).mods[t] & (1 << o)) CHECK(l.node[o].row < l.node[t].row);
+			for (int p = o + 1; p < 6; p++) // no two boxes overlap
+				if (l.node[o].row == l.node[p].row) CHECK(l.node[o].x + 0.999f <= l.node[p].x || l.node[p].x + 0.999f <= l.node[o].x);
+		}
+	}
+	AlgLayout l; LayoutAlgorithm(0, l);   // alg 1: chain of four over one carrier plus 2 over 1
+	CHECK(l.rows == 4);
+	LayoutAlgorithm(31, l);               // alg 32: six carriers
+	CHECK(l.rows == 1 && l.cols > 5.99f);
 }
 
 static void test_macros()
@@ -346,7 +381,7 @@ static void test_pages()
 
 int main()
 {
-	test_voice(); test_macros(); test_mutate(); test_session(); test_keys(); test_browse(); test_pages();
+	test_voice(); test_layout(); test_macros(); test_mutate(); test_session(); test_keys(); test_browse(); test_pages();
 	printf("%d checks, %d failed\n", g_checks, g_fail);
 	return g_fail ? 1 : 0;
 }

@@ -16,6 +16,7 @@ class BankSource {
 public:
 	virtual ~BankSource() {}
 	virtual int bankCount() = 0;
+	virtual bool bankValid(int /*bank*/) { return true; }
 	virtual void bankName(int bank, char out[kNameLen + 1]) = 0;
 	virtual bool voiceName(int bank, int index, char out[kNameLen + 1]) = 0;
 	virtual bool readVoice(int bank, int index, Voice& out) = 0;

@@ -61,7 +61,9 @@ struct Voice {
 // Algorithm facts (algorithm index 0..31 = DX7 algorithm 1..32)
 struct AlgInfo {
 	uint8_t carrierMask; // bit n set = op n (0 = OP1) is a carrier
-	uint8_t feedbackOp;  // op index (0..5) that carries the feedback loop
+	uint8_t feedbackOp;  // op index (0..5) where the feedback loop is read (FB_IN)
+	uint8_t feedbackOut; // op index (0..5) whose output feeds the loop; same as feedbackOp except algorithms 4 and 6
+	uint8_t mods[kOps];  // mods[n] = bit mask of the ops that modulate op n
 };
 const AlgInfo& Algorithm(int alg);
 inline bool IsCarrier(int alg, int op) { return (Algorithm(alg).carrierMask >> op) & 1; }

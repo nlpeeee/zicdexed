@@ -29,10 +29,15 @@ bool BrowseModel::moveVoice(int delta)
 bool BrowseModel::moveBank(int delta)
 {
 	if (!active_ || !src_ || delta == 0) return false;
-	int n = src_->bankCount();
-	int nb = bank_ + delta;
-	if (nb < 0) nb = 0;
-	if (nb > n - 1) nb = n - 1;
+	// step to the next bank that exists, in the direction asked
+	const int n = src_->bankCount(), dir = delta > 0 ? 1 : -1;
+	int nb = bank_;
+	for (int steps = delta > 0 ? delta : -delta; steps > 0; steps--) {
+		int c = nb + dir;
+		while (c >= 0 && c < n && !src_->bankValid(c)) c += dir;
+		if (c < 0 || c >= n) break;
+		nb = c;
+	}
 	if (nb == bank_) return false;
 	bank_ = nb;
 	return load();
