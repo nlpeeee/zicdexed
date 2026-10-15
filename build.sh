@@ -62,10 +62,9 @@ else
 	RPI=3 ./build.sh
 fi
 
-rm -rf "$OUT"; mkdir -p "$OUT"
+# an empty performance folder: Shift+f (SAVE PERFORMANCE) is refused without it on the card
+rm -rf "$OUT"; mkdir -p "$OUT" "$OUT"/performance
 cp src/kernel8.img "$OUT"/
 cp "$ROOT"/config/minidexed.ini "$OUT"/
 cp -r "$ROOT"/sysex "$OUT"/
-# Shift+f (SAVE PERFORMANCE) only works when the card has a performance folder
-mkdir -p "$OUT"/performance
 echo "SD card overlay ready in $OUT"
