@@ -3,6 +3,8 @@
 
 namespace zic {
 
+__attribute__((weak)) bool SoundDesignShiftKey(Ctx&, int) { return false; }
+
 void RegisterPages(Ui& ui)
 {
 	static Page* voice = CreateVoicePage();

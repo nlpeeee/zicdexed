@@ -72,6 +72,7 @@ public:
 	virtual bool key(Ctx&, int /*sub*/, int /*key*/, bool /*down*/) { return false; }
 
 	virtual void enter(Ctx&, int /*sub*/) {}
+	virtual void leave(Ctx&, int /*sub*/) {}     // just before another slot takes over
 	virtual void draw(Ctx& c, int sub) = 0;      // full redraw of the picture area
 	virtual void tick(Ctx&, int /*sub*/) {}      // ~25 fps: update the live parts only
 };

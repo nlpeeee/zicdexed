@@ -1,8 +1,8 @@
 # Host tests for src/ui:  make -C tests/ui test   (also writes screenshots with `make -C tests/ui shots`)
 CXX ?= g++
 CXXFLAGS = -std=c++14 -g -O1 -Wall -Wextra -fsanitize=address,undefined -fno-sanitize-recover=undefined \
-           -I../../src/ui -I../../tools/sim
-SRCS = $(wildcard ../../src/ui/*.cpp)
+           -I../../src/ui -I../../src/logic -I../../tools/sim
+SRCS = $(wildcard ../../src/ui/*.cpp) $(wildcard ../../src/logic/*.cpp)
 
 test: ui_test
 	./ui_test

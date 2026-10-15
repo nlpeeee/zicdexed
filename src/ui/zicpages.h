@@ -12,6 +12,10 @@ namespace zic {
 Page* CreateVoicePage();   // q: cutoff/reso/detune/volume, play, mix
 Page* CreateMixPage();     // f: the eight channel strips
 
+// Shift+q/w/e (INIT, MUTATE, OP MUTE), from any page. Returns false if not handled.
+// A weak default in zicregistry.cpp is replaced by the sound-design pages.
+bool SoundDesignShiftKey(Ctx& c, int key);
+
 // Called once at start-up: puts every page of this build into its slot.
 void RegisterPages(Ui& ui);
 

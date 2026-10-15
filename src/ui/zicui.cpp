@@ -1,4 +1,5 @@
 #include "zicui.h"
+#include "zicpages.h"
 #include <math.h>
 #include <string.h>
 
@@ -101,6 +102,7 @@ void Ui::gotoSlot(Slot s)
 		if (n > 1) sub_[s] = (sub_[s] + 1) % n;
 		else return;
 	} else {
+		if (page()) { Ctx lc = ctx(); page()->leave(lc, sub_[slot_]); }
 		slot_ = s;
 		sub_[s] = 0;
 	}
@@ -290,7 +292,7 @@ void Ui::key(int k, bool down, uint32_t nowMs)
 		}
 		if (k == K_V && vDown_) {
 			vDown_ = false;
-			if (!vFired_ && pages_[SLOT_VOICE]) { if (slot_ != SLOT_VOICE || sub_[SLOT_VOICE]) { sub_[SLOT_VOICE] = 0; slot_ = SLOT_VOICE; Ctx c2 = ctx(); pages_[SLOT_VOICE]->enter(c2, 0); redrawAll(); } }
+			if (!vFired_ && pages_[SLOT_VOICE]) { if (slot_ != SLOT_VOICE || sub_[SLOT_VOICE]) { if (slot_ != SLOT_VOICE && page()) { Ctx lc = ctx(); page()->leave(lc, sub_[slot_]); } sub_[SLOT_VOICE] = 0; slot_ = SLOT_VOICE; Ctx c2 = ctx(); pages_[SLOT_VOICE]->enter(c2, 0); redrawAll(); } }
 		}
 		return;
 	}
@@ -328,9 +330,12 @@ void Ui::normalKey(int k)
 void Ui::shiftKey(int k)
 {
 	switch (k) {
-	case K_Q: toast("INIT - NOT IN THIS BUILD"); break;
-	case K_W: toast("MUTATE - NOT IN THIS BUILD"); break;
-	case K_E: toast("OP MUTE - NOT IN THIS BUILD"); break;
+	case K_Q: case K_W: case K_E: {
+		Ctx c = ctx();
+		if (SoundDesignShiftKey(c, k)) break;
+		toast(k == K_Q ? "INIT - NOT IN THIS BUILD" : (k == K_W ? "MUTATE - NOT IN THIS BUILD" : "OP MUTE - NOT IN THIS BUILD"));
+		break;
+	}
 	case K_R: toast("FX - NOT IN THIS BUILD"); break;
 	case K_A: toggleMute(tg_); toast(muted_[tg_] ? "TG MUTED" : "TG UNMUTED"); redrawPicture(); break;
 	case K_S: toggleSolo(tg_); toast(solo_[tg_] ? "TG SOLO ON" : "TG SOLO OFF"); redrawPicture(); break;
