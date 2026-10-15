@@ -73,6 +73,6 @@ With `ZicUI=1` the stock `ButtonPin*` and `EncoderEnabled` must be off (the ship
 | `Shift+q/w/e` | INIT, MUTATE, OP MUTE (selected operator) |
 | `Shift+r` | FX: jumps to the MOD page's effects sub-page |
 | `Shift+d` | SAVE VOICE: writes the edit voice into the user bank `sysex/voice/000099_ZICUSER.syx` (bank 99; same name = same slot, otherwise the next free one). It shows up in BROWSE after a restart |
-| `Shift+f` | SAVE PERFORMANCE: overwrites the current performance, i.e. every TG's voice (edits included), levels, pans and the effects |
+| `Shift+f` | SAVE PERFORMANCE: needs a `performance` folder at the card root (MiniDexed refuses to save without it; `build.sh` puts an empty one in `out/`, copy it over). Overwrites the current performance, i.e. every TG's voice (edits included), levels, pans and the effects |
 
 The hub keeps one `EditSession` per TG and re-reads the synth's live voice on every entry point, so COMPARE, revert, program changes and SysEx all show up. FM macro amounts reset to 0 when that happens. OP MUTE only silences the sound. SAVE VOICE saves the edit voice, so muted operators are saved at their real level; SAVE PERFORMANCE saves what the synth is playing, so un-mute first.

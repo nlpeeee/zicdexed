@@ -155,7 +155,7 @@ bool SoundDesignShiftKey(Ctx& c, int key)
 		return true;
 	}
 	if (key == K_F) {                                                // SAVE PERFORMANCE
-		c.ui.toast(c.syn.savePerformance() ? "PERFORMANCE SAVED" : "SAVE FAILED");
+		c.ui.toast(c.syn.savePerformance() ? "PERFORMANCE SAVED" : "NO PERFORMANCE FOLDER ON SD");
 		return true;
 	}
 	switch (key) {

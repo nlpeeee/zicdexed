@@ -66,4 +66,6 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 cp src/kernel8.img "$OUT"/
 cp "$ROOT"/config/minidexed.ini "$OUT"/
 cp -r "$ROOT"/sysex "$OUT"/
+# Shift+f (SAVE PERFORMANCE) only works when the card has a performance folder
+mkdir -p "$OUT"/performance
 echo "SD card overlay ready in $OUT"
