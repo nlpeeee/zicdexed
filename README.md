@@ -35,7 +35,7 @@ Needs the Arm GNU toolchain 13.3.rel1 `aarch64-none-elf` on `PATH`, then `./buil
 1. Format the card as FAT32 and copy a MiniDexed release onto it.
 2. Copy the contents of `out/` (kernel8.img, minidexed.ini, sysex/) on top.
 
-MIDI comes in over USB (USB host keyboard, or `USBGadget=1` to play from a PC), or over WiFi with AppleMIDI/RTP-MIDI once networking is turned on.
+MIDI comes in over USB (USB host keyboard, or `USBGadget=1` to play from a PC), or over WiFi with AppleMIDI/RTP-MIDI once networking is turned on. Setup and firmware updates over WiFi are in [docs/wifi.md](docs/wifi.md).
 
 ## Licence
 
