@@ -6,18 +6,29 @@ Hardware: Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS,
 
 ## Status
 
-Proof of concept: stock MiniDexed UI plus a screen-offset fix, 1 encoder, 7 keys. The new UI is designed in [docs/ui-design.md](docs/ui-design.md), and the build order is listed at the end of that file.
+First flashable build of the new UI: the screen framework (lanes, key band, per-TG colour, Shift key map), all 12 keys and 4 encoders with acceleration, the VOICE and MIX pages, PLAY and COMPARE, and the stock menu under Shift+v. FM, OPS, MOD, BROWSE and KEYS are the next pages and show a "not in this build" toast. The design is in [docs/ui-design.md](docs/ui-design.md), how it is built is in [docs/firmware-ui.md](docs/firmware-ui.md).
+
+![simulated screens](docs/screens/simulated_contact_sheet.png)
+
+*Rendered on a PC by the same `src/ui` code the kernel runs (`make -C tests/ui shots`).*
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `build.sh` | Clones MiniDexed at a pinned commit, applies `patches/`, builds `out/kernel8.img` |
-| `patches/circle/` | Patches to the Circle library (ST7789 170x320 row offset) |
-| `patches/minidexed/` | Patches to MiniDexed (ZicDexed UI, encoders, keys) |
+| `build.sh` | Clones MiniDexed at a pinned commit, applies `patches/`, adds `src/`, builds `out/kernel8.img` |
+| `src/ui/` | Screen framework, pages, graphics and bitmap fonts. No Circle dependency |
+| `src/glue/` | Keys, encoders, panel flush and the MiniDexed adaptor |
+| `patches/circle/` | Circle patch (ST7789 170x320 row offset) |
+| `patches/minidexed/` | MiniDexed hooks (ini keys, serial MIDI switch, UI hand-over, meters) |
 | `config/minidexed.ini` | Settings for the ZicPixel |
-| `sysex/voice/` | Extra voice banks (`000000_nasty.syx`: 32 DnB/electro patches) |
-| `tools/nasty_makebank.py` | Generator for the nasty bank |
+| `sysex/voice/` | Extra voice banks (`000001_nasty.syx`: 32 DnB/electro patches) |
+| `tools/` | `fontgen.py` (Inter to bitmaps), `mockups/` (design renders), `sim/` (PC simulator), `nasty_makebank.py` |
+| `tests/ui/` | Host tests: `make -C tests/ui test` |
+
+## Building
+
+Needs the Arm GNU toolchain 13.3.rel1 `aarch64-none-elf` on `PATH`, then `./build.sh`. Set `SYNTH_DEXED_URL=https://github.com/probonopd/Synth_Dexed.git` if codeberg is unreachable. After a first full build, `ZIC_QUICK=1 ./build.sh` rebuilds only MiniDexed and the ZicDexed sources.
 
 ## SD card
 
