@@ -2,3 +2,4 @@ build/
 out/
 toolchain/
 *.tar.xz
+tests/test_logic
