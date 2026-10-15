@@ -2,3 +2,6 @@ build/
 out/
 toolchain/
 *.tar.xz
+tests/ui/ui_test
+tests/ui/sim
+tests/ui/shots/
