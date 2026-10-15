@@ -142,6 +142,15 @@ public:
 		return f;
 	}
 
+	void netStatus (char out[32]) override
+	{
+		const char *p = ZicGetNetStatus ();
+		if (!p[0] && m_pConfig->GetNetworkEnabled ()) p = "WiFi connecting";
+		unsigned n = 0;
+		for (; p[n] && n < 31; n++) out[n] = p[n];
+		out[n] = 0;
+	}
+
 	void setScopeTG (int tg) override { g_ZicMeter.scopeTG = tg; }
 
 	int scope (int16_t *out, int n) override

@@ -228,6 +228,9 @@ void Ui::drawMap()
 	g_.clear(BG);
 	g_.text(6, 2, "SHIFT", fHead, accent());
 	g_.text(70, 7, "encoders: fine steps", fSmall, GREY);
+	char net[32];
+	syn_.netStatus(net);
+	if (net[0]) g_.textAligned(0, 7, W - 6, net, fSmall, dim(accent(), 200), AL_RIGHT);
 	const int kw = 76, kh = 36;
 	for (int r = 0; r < 3; r++) {
 		for (int c = 0; c < 4; c++) {

@@ -11,6 +11,23 @@ LOGMODULE ("zicui");
 
 ZicMeter g_ZicMeter;
 
+static char s_NetStatus[32];
+
+void ZicSetNetStatus (const char *pPrefix, const char *pText)
+{
+	char buf[32];
+	unsigned n = 0;
+	for (; pPrefix[n] && n < 31; n++) buf[n] = pPrefix[n];
+	for (unsigned i = 0; pText && pText[i] && n < 31; i++) buf[n++] = pText[i];
+	buf[n] = 0;
+	memcpy (s_NetStatus, buf, sizeof s_NetStatus);
+}
+
+const char *ZicGetNetStatus (void)
+{
+	return s_NetStatus;
+}
+
 // ----------------------------------------------------------------- meters
 void ZicMeterFeed (const float *pLevels, unsigned nStride, unsigned nTGs, unsigned nFrames)
 {

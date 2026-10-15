@@ -93,6 +93,9 @@ public:
 	// Mute is a gain stage in front of the TG, independent of the volume lane.
 	virtual void setMute(int tg, bool muted) = 0;
 
+	// One line about the network for the Shift screen ("WiFi 192.168.1.5"), or "".
+	virtual void netStatus(char out[32]) { out[0] = 0; }
+
 	// Live metering. level() is the peak since the last call, 0..1 (linear).
 	virtual float level(int tg) = 0;
 	// The TG whose output feeds the scope, and the latest n samples of it,
