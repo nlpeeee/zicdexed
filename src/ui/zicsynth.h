@@ -82,6 +82,14 @@ public:
 	virtual bool voiceNameIn(int bank, int index, char out[kNameLen + 1]) = 0;
 	virtual bool readVoiceIn(int bank, int index, uint8_t v[kVoiceSize]) = 0;
 
+	// SAVE PERFORMANCE: overwrite the current performance (every TG's voice and
+	// settings, plus the effects). Returns false when it cannot be saved.
+	virtual bool savePerformance() { return false; }
+	// SAVE VOICE: store a voice in the user bank on the SD card. Returns the slot
+	// 0..31, or -1 not supported, -2 user bank full, -3 file error. The voice
+	// shows up in BROWSE after the next restart.
+	virtual int saveVoice(const uint8_t /*v*/[kVoiceSize]) { return -1; }
+
 	// Mute is a gain stage in front of the TG, independent of the volume lane.
 	virtual void setMute(int tg, bool muted) = 0;
 

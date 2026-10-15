@@ -134,10 +134,30 @@ void SoundHub::settle(int tg)
 
 bool SoundDesignShiftKey(Ctx& c, int key)
 {
-	if (key != K_Q && key != K_W && key != K_E) return false;
+	if (key != K_Q && key != K_W && key != K_E && key != K_R && key != K_D && key != K_F) return false;
+	if (key == K_R) { c.ui.gotoSub(SLOT_MOD, 2); return true; }       // FX
 	SoundHub& h = SoundHub::get();
 	h.bind(c);
 	zd::EditSession& s = h.session();
+	if (key == K_D) {                                                // SAVE VOICE
+		// the edit voice, not what is sounding: no op mutes in it
+		int slot = c.syn.saveVoice(s.edit().d);
+		char msg[32];
+		if (slot >= 0) {
+			s.markSaved();
+			copyStr(msg, "SAVED USER ", sizeof msg);
+			fmtInt(msg + 11, slot + 1);
+			copyStr(msg + (slot + 1 < 10 ? 12 : 13), " - RESTART TO USE", sizeof msg - 13);
+		} else {
+			copyStr(msg, slot == -2 ? "USER BANK FULL" : (slot == -1 ? "SAVE VOICE - NOT IN THIS BUILD" : "SAVE FAILED"), sizeof msg);
+		}
+		c.ui.toast(msg);
+		return true;
+	}
+	if (key == K_F) {                                                // SAVE PERFORMANCE
+		c.ui.toast(c.syn.savePerformance() ? "PERFORMANCE SAVED" : "SAVE FAILED");
+		return true;
+	}
 	switch (key) {
 	case K_Q:
 		s.init();

@@ -168,6 +168,28 @@ int main()
 		r.press(K_V);
 		CHECK(r.live(1) == tg1);
 	}
+	{	// Shift+r goes straight to the FX sub-page; Shift+d saves the edit voice; Shift+f saves the performance
+		Rig r;
+		r.shiftPress(K_R);
+		CHECK(r.ui.slot() == SLOT_MOD && r.ui.sub() == 2);
+		r.shiftPress(K_R);                           // already there: stays
+		CHECK(r.ui.slot() == SLOT_MOD && r.ui.sub() == 2);
+		r.press(K_W);
+		r.turn(2, 10);                               // a Bright macro edit
+		r.shiftPress(K_E);                           // op 1 muted: sounds silent but must not be saved silent
+		zd::Voice live = r.live();
+		r.syn.saveResult = 6;
+		r.shiftPress(K_D);
+		CHECK(r.syn.voiceSaves == 1);
+		zd::Voice saved; memcpy(saved.d, r.syn.lastSaved, kVoiceSize);
+		CHECK(saved.op(0, zd::OP_OL) > 0 && live.op(0, zd::OP_OL) == 0);
+		CHECK(saved.op(1, zd::OP_OL) == live.op(1, zd::OP_OL));
+		r.syn.saveResult = -2;
+		r.shiftPress(K_D);
+		CHECK(r.syn.voiceSaves == 2);
+		r.shiftPress(K_F);
+		CHECK(r.syn.perfSaves == 1);
+	}
 	{	// KEYS: pads play the current TG through the scale, held notes release on exit
 		Rig r;
 		r.ui.key(K_Z, true, r.ms); r.run(20); r.press(K_X); r.ui.key(K_Z, false, r.ms); r.run(20);

@@ -111,6 +111,16 @@ void Ui::gotoSlot(Slot s)
 	redrawAll();
 }
 
+void Ui::gotoSub(Slot s, int sub)
+{
+	if (s != slot_ || !pages_[s]) gotoSlot(s);
+	if (!pages_[s] || s != slot_ || sub < 0 || sub >= pages_[s]->subCount() || sub_[s] == sub) return;
+	sub_[s] = sub;
+	Ctx c = ctx();
+	pages_[s]->enter(c, sub);
+	redrawAll();
+}
+
 // ---------------------------------------------------------------- drawing
 void Ui::drawLane(int i)
 {
@@ -336,11 +346,11 @@ void Ui::shiftKey(int k)
 		toast(k == K_Q ? "INIT - NOT IN THIS BUILD" : (k == K_W ? "MUTATE - NOT IN THIS BUILD" : "OP MUTE - NOT IN THIS BUILD"));
 		break;
 	}
-	case K_R: toast("FX - NOT IN THIS BUILD"); break;
+	case K_R: { Ctx c = ctx(); if (!SoundDesignShiftKey(c, k)) toast("FX - NOT IN THIS BUILD"); break; }
 	case K_A: toggleMute(tg_); toast(muted_[tg_] ? "TG MUTED" : "TG UNMUTED"); redrawPicture(); break;
 	case K_S: toggleSolo(tg_); toast(solo_[tg_] ? "TG SOLO ON" : "TG SOLO OFF"); redrawPicture(); break;
-	case K_D: toast("SAVE VOICE - NOT IN THIS BUILD"); break;
-	case K_F: toast("SAVE PERFORMANCE - NOT IN THIS BUILD"); break;
+	case K_D: { Ctx c = ctx(); if (!SoundDesignShiftKey(c, k)) toast("SAVE VOICE - NOT IN THIS BUILD"); break; }
+	case K_F: { Ctx c = ctx(); if (!SoundDesignShiftKey(c, k)) toast("SAVE PERFORMANCE - NOT IN THIS BUILD"); break; }
 	case K_X: gotoSlot(SLOT_KEYS); break;
 	case K_C: syn_.revert(tg_); toast("REVERTED"); redrawAll(); break;
 	case K_V: menuReq_ = true; suspended_ = true; break;

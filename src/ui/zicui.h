@@ -58,6 +58,7 @@ public:
 	Slot slot() const { return slot_; }
 	int sub() const { return sub_[slot_]; }
 	void gotoSlot(Slot s);
+	void gotoSub(Slot s, int sub);       // jump straight to a sub-page
 	void redrawPicture();
 	void redrawFooter() { if (!suspended_ && !mapShown_) drawFooter(); }
 	void redrawAll();

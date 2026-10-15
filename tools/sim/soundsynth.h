@@ -10,6 +10,8 @@ struct SoundSynth : FakeSynth {
 	uint8_t voice[kMaxTG][kVoiceSize];
 	uint8_t saved[kMaxTG][kVoiceSize];
 	bool comparing[kMaxTG] = {};
+	int perfSaves = 0, voiceSaves = 0, saveResult = 0;
+	uint8_t lastSaved[kVoiceSize] = {};
 	int notesOn = 0, notesOff = 0, lastNote = -1, loads = 0;
 	int notesHeld[16] = {};
 
@@ -49,6 +51,8 @@ struct SoundSynth : FakeSynth {
 	void compareBegin(int tg) override { memcpy(saved[tg], voice[tg], kVoiceSize); comparing[tg] = true; bankVoice(tgv[tg][P_BANK], tgv[tg][P_PROGRAM], voice[tg]); }
 	void compareEnd(int tg) override { if (comparing[tg]) memcpy(voice[tg], saved[tg], kVoiceSize); comparing[tg] = false; }
 	void revert(int tg) override { bankVoice(tgv[tg][P_BANK], tgv[tg][P_PROGRAM], voice[tg]); nameFrom(tg); }
+	bool savePerformance() override { perfSaves++; return true; }
+	int saveVoice(const uint8_t* v) override { voiceSaves++; memcpy(lastSaved, v, kVoiceSize); return saveResult; }
 	int getFx(FxParam p) override { return fx[p]; }
 	int bankCount() override { return 4; }
 	bool bankValid(int b) override { return b >= 0 && b < 4 && b != 2; }

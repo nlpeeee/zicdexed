@@ -4,6 +4,9 @@
 #include "../src/logic/page_model.h"
 #include "../src/logic/shift_map.h"
 #include "../src/logic/alg_layout.h"
+#include "../src/logic/voice_pack.h"
+#include "../src/glue/zicsave.h"
+#include <unistd.h>
 
 using namespace zd;
 
@@ -68,6 +71,84 @@ static void test_voice()
 	char n[11]; Voice::Init().name(n);
 	CHECK(strcmp(n, "INIT VOICE") == 0);
 	for (int off = 0; off < kVoiceSize; off++) { Voice t = Voice::Init(); t.set(off, 100000); CHECK(t.d[off] <= ParamMax(off) || off >= G_NAME); }
+}
+
+// MiniDexed's own unpacker (sysexfileloader.cpp DecodePackedVoice), as the oracle for PackVoice
+static void Unpack(const uint8_t* p, uint8_t* o)
+{
+	memset(o, 0, 156);
+	for (unsigned op = 0; op < 6; op++) {
+		memcpy(&o[op * 21], &p[op * 17], 11);
+		o[op * 21 + 11] = p[op * 17 + 11] & 3; o[op * 21 + 12] = (p[op * 17 + 11] >> 2) & 3;
+		o[op * 21 + 13] = p[op * 17 + 12] & 7; o[op * 21 + 20] = p[op * 17 + 12] >> 3;
+		o[op * 21 + 14] = p[op * 17 + 13] & 3; o[op * 21 + 15] = p[op * 17 + 13] >> 2;
+		o[op * 21 + 16] = p[op * 17 + 14];
+		o[op * 21 + 17] = p[op * 17 + 15] & 1; o[op * 21 + 18] = p[op * 17 + 15] >> 1;
+		o[op * 21 + 19] = p[op * 17 + 16];
+	}
+	memcpy(&o[126], &p[102], 9);
+	o[135] = p[111] & 7; o[136] = p[111] >> 3;
+	memcpy(&o[137], &p[112], 4);
+	o[141] = p[116] & 1; o[142] = (p[116] >> 1) & 7; o[143] = p[116] >> 4;
+	memcpy(&o[144], &p[117], 11);
+}
+
+static void test_pack()
+{
+	Rng rng(99);
+	for (int n = 0; n < 500; n++) {
+		Voice v = Voice::Init();
+		for (int off = 0; off < G_NAME; off++) v.set(off, rng.range(0, ParamMax(off)));
+		v.setName("ROUNDTRIP");
+		uint8_t packed[kPackedVoice], back[156];
+		PackVoice(v, packed);
+		Unpack(packed, back);
+		CHECK(memcmp(back, v.d, kVoiceSize) == 0);
+	}
+	uint8_t file[kBankFileSize];
+	InitBankFile(file);
+	CHECK(IsBankFile(file, kBankFileSize));
+	CHECK(FindSaveSlot(file, "NEW SOUND ") == 0);
+	Voice v = Voice::Init(); v.setName("NEW SOUND"); v.set(G_FB, 5);
+	StoreVoice(file, 0, v);
+	CHECK(FindSaveSlot(file, "NEW SOUND ") == 0);        // same name: overwrite
+	CHECK(FindSaveSlot(file, "OTHER     ") == 1);        // different name: next free
+	Voice w = Voice::Init(); w.setName("OTHER");
+	StoreVoice(file, 1, w);
+	int sum = 0;
+	for (int i = 0; i < 4096; i++) sum += file[6 + i];
+	CHECK(file[4102] == ((-sum) & 0x7F) && file[4103] == 0xF7);
+	for (int i = 0; i < 32; i++) { Voice x = Voice::Init(); x.setName("FILL"); char nm[11]; snprintf(nm, sizeof nm, "FILL%02d    ", i); x.setName(nm); StoreVoice(file, i, x); }
+	CHECK(FindSaveSlot(file, "NEW SOUND ") == -1);       // full
+	CHECK(FindSaveSlot(file, "FILL07    ") == 7);
+}
+
+static void test_save_file()
+{
+	unlink(ZIC_USER_BANK_PATH);
+	Voice v = Voice::Init(); v.set(G_FB, 3); v.setName("SAVED ONE");
+	CHECK(zic::SaveVoiceToUserBank(v.d) == 0);
+	v.set(G_FB, 6);
+	CHECK(zic::SaveVoiceToUserBank(v.d) == 0);           // same name: same slot
+	Voice w = Voice::Init(); w.setName("SECOND");
+	CHECK(zic::SaveVoiceToUserBank(w.d) == 1);
+	FILE* f = fopen(ZIC_USER_BANK_PATH, "rb");
+	uint8_t buf[5000]; size_t n = f ? fread(buf, 1, sizeof buf, f) : 0;
+	if (f) fclose(f);
+	CHECK(n == (size_t)kBankFileSize && IsBankFile(buf, (int)n));
+	uint8_t back[156]; Unpack(buf + 6, back);
+	CHECK(back[G_FB] == 6 && memcmp(back + G_NAME, "SAVED ONE ", 10) == 0);
+	// a file we do not understand is never overwritten
+	f = fopen(ZIC_USER_BANK_PATH, "wb"); fwrite("junk", 1, 4, f); fclose(f);
+	CHECK(zic::SaveVoiceToUserBank(v.d) == -3);
+	f = fopen(ZIC_USER_BANK_PATH, "rb"); n = fread(buf, 1, sizeof buf, f); fclose(f);
+	CHECK(n == 4);
+	// fill the bank
+	unlink(ZIC_USER_BANK_PATH);
+	for (int i = 0; i < 32; i++) { char nm[11]; snprintf(nm, sizeof nm, "V%02d", i); Voice x = Voice::Init(); x.setName(nm); CHECK(zic::SaveVoiceToUserBank(x.d) == i); }
+	Voice y = Voice::Init(); y.setName("ONE TOO MANY");
+	CHECK(zic::SaveVoiceToUserBank(y.d) == -2);
+	unlink(ZIC_USER_BANK_PATH);
 }
 
 static void test_layout()
@@ -381,7 +462,7 @@ static void test_pages()
 
 int main()
 {
-	test_voice(); test_layout(); test_macros(); test_mutate(); test_session(); test_keys(); test_browse(); test_pages();
+	test_voice(); test_pack(); test_save_file(); test_layout(); test_macros(); test_mutate(); test_session(); test_keys(); test_browse(); test_pages();
 	printf("%d checks, %d failed\n", g_checks, g_fail);
 	return g_fail ? 1 : 0;
 }
