@@ -37,7 +37,7 @@ The screens in [ui-design.md](ui-design.md) run as real code. This page is for w
 | Encoders | 1..4 on GPIO `26/13, 6/5, 0/9, 27/4`, interrupt driven. Turn speed sets the step: under 12 ms per click x6, under 25 ms x3, under 60 ms x2, else x1 |
 | Direction | `ZicEncoderInvert` in `minidexed.ini`: bit n reverses encoder n+1 |
 
-Implemented keys in this build: `q` VOICE (press again for sub-pages), `f` MIX, `a`/`s` TG-/TG+, `x` PLAY (hold), `c` COMPARE (hold), `v` EXIT home (hold 0.7 s = panic), `z` SHIFT (hold 0.25 s shows the key map; `Shift+a` TG mute, `Shift+s` TG solo, `Shift+c` revert, `Shift+v` stock menu). The other keys show a "not in this build" toast until their pages land.
+Implemented keys in this build: `q` VOICE (press again for sub-pages), `f` MIX, `a`/`s` TG-/TG+, `x` PLAY (hold), `c` COMPARE (hold), `v` EXIT home (hold 0.7 s = panic), `z` SHIFT (hold 0.25 s shows the key map; `Shift+a` TG mute, `Shift+s` TG solo, `Shift+c` revert, `Shift+v` stock menu). 
 
 In the stock menu: `v` select, `c` back, `d` home, `a`/`s` program, `q`/`w` TG, `e`/`r` bank, any encoder scrolls, `Shift+v` returns to the ZicDexed screens.
 
@@ -58,3 +58,21 @@ With `ZicUI=1` the stock `ButtonPin*` and `EncoderEnabled` must be off (the ship
 3. Each encoder lights its own lane; if one runs backwards set its bit in `ZicEncoderInvert`.
 4. With a USB keyboard playing: the scope moves, the TG dots light, MIX level ticks follow.
 5. Hold `x` and hear a note with nothing plugged in; hold `c` and hear the stored voice, release and get your edit back.
+
+## Sound-design pages (FM, OPS, ENV, MOD, BROWSE, KEYS)
+
+`src/logic/` holds the lane tables and edit logic; `src/ui/soundhub.*` and `src/ui/soundpages.cpp` map them onto the framework. Screenshots: [sound_pages.png](screens/sound_pages.png), all 32 algorithms in [algorithms.png](screens/algorithms.png) (`make -C tests/ui sound_shots`).
+
+| Key | Page |
+|---|---|
+| `w` | FM: Algo, Feedback, Bright, Snarl. Press again: Bite, Tail, Vel, Sync |
+| `e` | OPS: Op, Level, Ratio (Shift = fine), Detune. Press again: operator envelope, rates (Shift = levels) |
+| `r` | MOD: LFO (wave, speed, pitch, amp), pitch EG, FX (reverb size, damping, level, compressor) |
+| `d` | BROWSE: turning Voice previews on the target TG; `c` loads, leaving the page undoes the preview |
+| `Shift+x` | KEYS: `q w e r a s d f` play the current scale on the current TG |
+| `Shift+q/w/e` | INIT, MUTATE, OP MUTE (selected operator) |
+| `Shift+r` | FX: jumps to the MOD page's effects sub-page |
+| `Shift+d` | SAVE VOICE: writes the edit voice into the user bank `sysex/voice/000099_ZICUSER.syx` (bank 99; same name = same slot, otherwise the next free one). It shows up in BROWSE after a restart |
+| `Shift+f` | SAVE PERFORMANCE: needs a `performance` folder at the card root (MiniDexed refuses to save without it; `build.sh` puts an empty one in `out/`, copy it over). Overwrites the current performance, i.e. every TG's voice (edits included), levels, pans and the effects |
+
+The hub keeps one `EditSession` per TG and re-reads the synth's live voice on every entry point, so COMPARE, revert, program changes and SysEx all show up. FM macro amounts reset to 0 when that happens. OP MUTE only silences the sound. SAVE VOICE saves the edit voice, so muted operators are saved at their real level; SAVE PERFORMANCE saves what the synth is playing, so un-mute first.

@@ -4,6 +4,7 @@
 //
 #include "zicglue.h"
 #include "zicmeter.h"
+#include "zicsave.h"
 #include "minidexed.h"
 #include <string.h>
 
@@ -127,6 +128,9 @@ public:
 		memcpy (v, buf, kVoiceSize);
 		return true;
 	}
+
+	bool savePerformance () override { return m_pMini->SavePerformance (false); }
+	int saveVoice (const uint8_t v[kVoiceSize]) override { return SaveVoiceToUserBank (v); }
 
 	void setMute (int tg, bool muted) override { m_pMini->SetExpression (muted ? 0 : 127, tg); }
 

@@ -44,7 +44,7 @@ int main()
 		r.turn(3, 7);
 		CHECK(r.syn.get(P_VOLUME, 0) == 107);
 	}
-	{	// page keys: q cycles the VOICE sub-pages; FM/OPS/MOD are not in this build
+	{	// page keys: q cycles the VOICE sub-pages; w/e/r/d jump to FM/OPS/MOD/BROWSE
 		Rig r;
 		CHECK(r.ui.slot() == SLOT_VOICE && r.ui.sub() == 0);
 		r.press(K_Q); CHECK(r.ui.sub() == 1);
@@ -52,10 +52,10 @@ int main()
 		r.press(K_Q); CHECK(r.ui.sub() == 2);
 		r.turn(3, 1); CHECK(r.syn.get(P_PROGRAM, 0) == 1);   // program steps one voice per click
 		r.press(K_Q); CHECK(r.ui.sub() == 0);
-		r.press(K_W); CHECK(r.ui.slot() == SLOT_VOICE);
-		r.press(K_E); CHECK(r.ui.slot() == SLOT_VOICE);
-		r.press(K_R); CHECK(r.ui.slot() == SLOT_VOICE);
-		r.press(K_D); CHECK(r.ui.slot() == SLOT_VOICE);
+		r.press(K_W); CHECK(r.ui.slot() == SLOT_FM);
+		r.press(K_E); CHECK(r.ui.slot() == SLOT_OPS);
+		r.press(K_R); CHECK(r.ui.slot() == SLOT_MOD);
+		r.press(K_D); CHECK(r.ui.slot() == SLOT_BROWSE);
 		r.press(K_F); CHECK(r.ui.slot() == SLOT_MIX);
 		r.press(K_V); CHECK(r.ui.slot() == SLOT_VOICE && r.ui.sub() == 0);   // EXIT goes home
 	}
