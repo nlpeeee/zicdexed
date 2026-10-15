@@ -129,7 +129,7 @@ int main(int argc, char** argv)
 	printf("[5] Shift+f SAVE PERFORMANCE\n");
 	r->shiftPress(K_F);
 	dump(r->g, "07_save_perf_no_folder");
-	CHECK(r->syn.perfWrites == 0, "no /performance folder on the card: save is refused (this is what the toast 'SAVE FAILED' means)");
+	CHECK(r->syn.perfWrites == 0, "no /performance folder on the card: save is refused (the toast says NO PERFORMANCE FOLDER ON SD)");
 	(void)!system("mkdir -p sdcard/performance");
 	r->shiftPress(K_F);
 	dump(r->g, "08_save_perf_with_folder");
