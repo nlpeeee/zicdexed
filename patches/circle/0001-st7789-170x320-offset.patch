@@ -1,0 +1,18 @@
+diff --git a/addon/display/st7789display.cpp b/addon/display/st7789display.cpp
+index 7bd29cac..f147ba39 100644
+--- a/addon/display/st7789display.cpp
++++ b/addon/display/st7789display.cpp
+@@ -500,6 +500,13 @@ void CST7789Display::SetWindow (unsigned x0, unsigned y0, unsigned x1, unsigned
+ 	assert (x1 < m_nWidth);
+ 	assert (y1 < m_nHeight);
+ 
++	// 170x320 panels (e.g. 1.9" modules) only show RAM rows 35..204
++	if (m_nWidth == 320 && m_nHeight == 170)
++	{
++		y0 += 35;
++		y1 += 35;
++	}
++
+ 	Command (ST7789_CASET);
+ 	Data (x0 >> 8);
+ 	Data (x0 & 0xFF);
