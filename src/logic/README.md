@@ -11,6 +11,7 @@ Pure C++17 logic for the sound-design pages (FM, OPS, ENV, MOD, BROWSE, KEYS, SH
 | `page_model` | Lane tables (label, value text, bar fraction, encoder turn) for every page |
 | `keys_model` | KEYS page scales and held-note tracking |
 | `browse_model` | BROWSE list window, live preview, load/cancel |
+| `alg_layout` | Box positions for drawing any of the 32 algorithms |
 | `shift_map` | Key map for the SHIFT screen and the action behind each Shift+key |
 
 ## What the framework provides
@@ -28,4 +29,4 @@ Per encoder turn the framework calls `AdjustLane(GetPage(id), lane, ctx, delta)`
 - While COMPARE is held, edits and actions are ignored, as on the DX7.
 - ENV and PITCH EG lanes show rates; with Shift held they show and edit levels.
 - Ratio lane edits coarse; with Shift it edits fine. Algorithm 32 has no modulators, so Bright/Snarl/Bite only affect feedback there.
-- The algorithm table was written from the DX7 chart and checked for carrier counts only. Please confirm it against Dexed's table when the framework lands.
+- The algorithm routing table is the Dexed/MSFA engine table (Synth_Dexed `fm_core.cpp`), so carriers, modulators and feedback match what the synth plays. `alg_layout` turns it into box positions for the FM picture (`docs/screens/algorithms.png` shows all 32).
