@@ -1,0 +1,242 @@
+diff --git a/src/Makefile b/src/Makefile
+index 1914e15..64ec0f4 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -13,6 +13,10 @@ OBJS = main.o kernel.o minidexed.o config.o userinterface.o uimenu.o \
+        arm_float_to_q23.o arm_scale_zip_f32.o \
+        net/ftpdaemon.o net/ftpworker.o net/applemidi.o net/udpmidi.o net/mdnspublisher.o udpmididevice.o
+ 
++# ZicDexed: build.sh copies its sources here and lists the objects in zicobjs.mk
++-include zicobjs.mk
++OBJS += $(ZIC_OBJS)
++
+ EXTRACLEAN = $(OBJS) $(OBJS:.o=.d)
+ 
+ OPTIMIZE = -O3
+diff --git a/src/config.cpp b/src/config.cpp
+index 09e5dce..69a3801 100644
+--- a/src/config.cpp
++++ b/src/config.cpp
+@@ -216,6 +216,9 @@ void CConfig::Load (void)
+ 	m_nMIDIButtonTGDown = m_Properties.GetNumber ("MIDIButtonTGDown", 0);
+ 	
+ 	m_bEncoderEnabled = m_Properties.GetNumber ("EncoderEnabled", 0) != 0;
++	m_bZicUI = m_Properties.GetNumber ("ZicUI", 0) != 0;
++	m_bSerialMIDIEnabled = m_Properties.GetNumber ("SerialMIDIEnabled", 1) != 0;
++	m_nZicEncoderInvert = m_Properties.GetNumber ("ZicEncoderInvert", 0);
+ 	m_nEncoderPinClock = m_Properties.GetNumber ("EncoderPinClock", 10);
+ 	m_nEncoderPinData = m_Properties.GetNumber ("EncoderPinData", 9);
+ 	
+@@ -788,6 +791,21 @@ unsigned CConfig::GetEncoderDetents (void) const
+ 	return m_nEncoderDetents;
+ }
+ 
++bool CConfig::GetZicUI (void) const
++{
++	return m_bZicUI;
++}
++
++bool CConfig::GetSerialMIDIEnabled (void) const
++{
++	return m_bSerialMIDIEnabled;
++}
++
++unsigned CConfig::GetZicEncoderInvert (void) const
++{
++	return m_nZicEncoderInvert;
++}
++
+ bool CConfig::GetMIDIDumpEnabled (void) const
+ {
+ 	return m_bMIDIDumpEnabled;
+diff --git a/src/config.h b/src/config.h
+index 2e9c423..76b8912 100644
+--- a/src/config.h
++++ b/src/config.h
+@@ -237,6 +237,11 @@ public:
+ 	unsigned GetEncoderPinData (void) const;
+ 	unsigned GetEncoderDetents (void) const;
+ 
++	// ZicDexed (ZicPixel hardware)
++	bool GetZicUI (void) const;			// custom screens on all 12 keys and 4 encoders
++	bool GetSerialMIDIEnabled (void) const;		// false frees GPIO 14/15
++	unsigned GetZicEncoderInvert (void) const;	// bit n set = reverse encoder n+1
++
+ 	// Debug
+ 	bool GetMIDIDumpEnabled (void) const;
+ 	bool GetProfileEnabled (void) const;
+@@ -373,6 +378,9 @@ private:
+ 	unsigned m_nMIDIButtonTGDown;
+ 
+ 	bool m_bEncoderEnabled;
++	bool m_bZicUI;
++	bool m_bSerialMIDIEnabled;
++	unsigned m_nZicEncoderInvert;
+ 	unsigned m_nEncoderPinClock;
+ 	unsigned m_nEncoderPinData;
+ 	unsigned m_nEncoderDetents;
+diff --git a/src/minidexed.cpp b/src/minidexed.cpp
+index 4ec0ad0..15f0c0e 100644
+--- a/src/minidexed.cpp
++++ b/src/minidexed.cpp
+@@ -18,6 +18,7 @@
+ // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ //
+ #include "minidexed.h"
++#include "zicmeter.h"
+ #include <circle/logger.h>
+ #include <circle/memory.h>
+ #include <circle/sound/pwmsoundbasedevice.h>
+@@ -283,7 +284,7 @@ bool CMiniDexed::Initialize (void)
+ 
+ 	m_SysExFileLoader.Load (m_pConfig->GetHeaderlessSysExVoices ());
+ 
+-	if (m_SerialMIDI.Initialize ())
++	if (m_pConfig->GetSerialMIDIEnabled () && m_SerialMIDI.Initialize ())
+ 	{
+ 		LOGNOTE ("Serial MIDI interface enabled");
+ 
+@@ -1403,6 +1404,7 @@ void CMiniDexed::ProcessSound (void)
+ 				tg_mixer->doAddMix(i,m_OutputLevel[i]);
+ 			}
+ 			// END TG mixing
++			ZicMeterFeed (m_OutputLevel[0], CConfig::MaxChunkSize, m_nToneGenerators, nFrames);
+ 
+ 			// BEGIN adding reverb
+ 			if (m_nParameter[ParameterReverbEnable])
+diff --git a/src/userinterface.cpp b/src/userinterface.cpp
+index b503b21..eae0931 100644
+--- a/src/userinterface.cpp
++++ b/src/userinterface.cpp
+@@ -38,12 +38,14 @@ CUserInterface::CUserInterface (CMiniDexed *pMiniDexed, CGPIOManager *pGPIOManag
+ 	m_pUIButtons (0),
+ 	m_pRotaryEncoder (0),
+ 	m_bSwitchPressed (false),
+-	m_Menu (this, pMiniDexed, pConfig)
++	m_Menu (this, pMiniDexed, pConfig),
++	m_pZic (0)
+ {
+ }
+ 
+ CUserInterface::~CUserInterface (void)
+ {
++	delete m_pZic;
+ 	delete m_pRotaryEncoder;
+ 	delete m_pUIButtons;
+ 	delete m_pLCDBuffered;
+@@ -195,7 +197,21 @@ bool CUserInterface::Initialize (void)
+ 		LOGDBG ("Rotary encoder initialized");
+ 	}
+ 
+-	m_Menu.EventHandler (CUIMenu::MenuEventUpdate);
++	if (m_pConfig->GetZicUI () && m_pST7789Display)
++	{
++		m_pZic = new CZicUI (m_pMiniDexed, m_pGPIOManager, m_pConfig, m_pST7789Display, this);
++		if (!m_pZic->Initialize ())
++		{
++			LOGERR ("ZicDexed UI failed to start, using the stock menu");
++			delete m_pZic;
++			m_pZic = 0;
++		}
++	}
++
++	if (!m_pZic)
++	{
++		m_Menu.EventHandler (CUIMenu::MenuEventUpdate);
++	}
+ 
+ 	return true;
+ }
+@@ -210,15 +226,21 @@ void CUserInterface::Process (void)
+ 	{
+ 		m_pUIButtons->Update();
+ 	}
++	if (m_pZic)
++	{
++		m_pZic->Process ();
++	}
+ }
+ 
+ void CUserInterface::ParameterChanged (void)
+ {
++	if (m_pZic && !m_pZic->InMenu ()) return;	// ZicDexed screens poll the synth themselves
+ 	m_Menu.EventHandler (CUIMenu::MenuEventUpdateParameter);
+ }
+ 
+ void CUserInterface::DisplayChanged (void)
+ {
++	if (m_pZic && !m_pZic->InMenu ()) return;
+ 	m_Menu.EventHandler (CUIMenu::MenuEventUpdate);
+ }
+ 
+@@ -229,6 +251,8 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const
+ 	assert (pParam);
+ 	assert (pValue);
+ 
++	if (m_pZic && !m_pZic->InMenu ()) return;
++
+ 	CString Msg ("\x1B[H\E[?25l");		// cursor home and off
+ 
+ 	// first line
+@@ -277,6 +301,25 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const
+ 	LCDWrite (Msg);
+ }
+ 
++void CUserInterface::ZicMenuOpen (void)
++{
++	LCDWrite ("\x1B[H\x1B[J");			// cursor home and clear screen
++	m_Menu.EventHandler (CUIMenu::MenuEventUpdate);
++}
++
++void CUserInterface::ZicMenuEvent (TZicMenuEvent Event)
++{
++	static const CUIMenu::TMenuEvent Map[] =
++	{
++		CUIMenu::MenuEventStepUp, CUIMenu::MenuEventStepDown, CUIMenu::MenuEventBack,
++		CUIMenu::MenuEventSelect, CUIMenu::MenuEventHome,
++		CUIMenu::MenuEventPgmUp, CUIMenu::MenuEventPgmDown,
++		CUIMenu::MenuEventBankUp, CUIMenu::MenuEventBankDown,
++		CUIMenu::MenuEventTGUp, CUIMenu::MenuEventTGDown
++	};
++	m_Menu.EventHandler (Map[Event]);
++}
++
+ void CUserInterface::LCDWrite (const char *pString)
+ {
+ 	if (m_pLCDBuffered)
+diff --git a/src/userinterface.h b/src/userinterface.h
+index 6290d86..30587e6 100644
+--- a/src/userinterface.h
++++ b/src/userinterface.h
+@@ -31,10 +31,11 @@
+ #include <circle/writebuffer.h>
+ #include <circle/i2cmaster.h>
+ #include <circle/spimaster.h>
++#include "zicglue.h"
+ 
+ class CMiniDexed;
+ 
+-class CUserInterface
++class CUserInterface : public IZicMenuHost
+ {
+ public:
+ 	CUserInterface (CMiniDexed *pMiniDexed, CGPIOManager *pGPIOManager, CI2CMaster *pI2CMaster, CSPIMaster *pSPIMaster, CConfig *pConfig);
+@@ -55,6 +56,10 @@ public:
+ 	void DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
+ 			   bool bArrowDown, bool bArrowUp);
+ 
++	// ZicDexed: the stock menu, opened with Shift+v
++	void ZicMenuOpen (void) override;
++	void ZicMenuEvent (TZicMenuEvent Event) override;
++
+ 	// To be called from the MIDI device on reception of a MIDI CC message
+ 	void UIMIDICmdHandler (unsigned nMidiCh, unsigned nMidiType, unsigned nMidiData1, unsigned nMidiData2);
+ 
+@@ -89,6 +94,7 @@ private:
+ 	bool m_bSwitchPressed;
+ 
+ 	CUIMenu m_Menu;
++	CZicUI *m_pZic;			// ZicDexed screens, or 0 for the stock menu
+ };
+ 
+ #endif

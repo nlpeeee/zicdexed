@@ -3,3 +3,6 @@ out/
 toolchain/
 *.tar.xz
 tests/test_logic
+tests/ui/ui_test
+tests/ui/sim
+tests/ui/shots/
