@@ -23,4 +23,8 @@ extern ZicMeter g_ZicMeter;
 // output buffers (nTG rows of `stride` floats, `nFrames` valid).
 void ZicMeterFeed (const float *pLevels, unsigned nStride, unsigned nTGs, unsigned nFrames);
 
+// WiFi status line for the Shift screen: prefix + text (text may be 0)
+void ZicSetNetStatus (const char *pPrefix, const char *pText);
+const char *ZicGetNetStatus (void);
+
 #endif

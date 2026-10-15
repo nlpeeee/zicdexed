@@ -65,6 +65,7 @@ struct FakeSynth : ISynth {
 	bool readVoiceIn(int, int, uint8_t*) override { return false; }
 	void setMute(int tg, bool m) override { muted[tg] = m; }
 	float level(int tg) override { float l = lvl[tg]; return l; }
+	void netStatus(char out[32]) override { strcpy(out, "WiFi 192.168.1.42"); }
 	void setScopeTG(int tg) override { scopeTG = tg; }
 	int scope(int16_t* out, int cnt) override
 	{
