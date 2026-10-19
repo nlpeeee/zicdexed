@@ -69,6 +69,13 @@ struct SoundSynth : FakeSynth {
 		}
 		return 1;
 	}
+	int resets = 0, resetResult = 2;
+	int resetUserBank() override
+	{
+		resets++;
+		if (resetResult > 0) { userStatus = 1; for (int i = 0; i < 32; i++) userUsed[i] = false; }
+		return resetResult;
+	}
 	int saveVoiceTo(const uint8_t* v, int slot) override
 	{
 		if (saveResult < 0) return saveResult;

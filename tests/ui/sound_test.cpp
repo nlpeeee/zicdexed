@@ -259,10 +259,24 @@ int main()
 		zd::Voice saved; memcpy(saved.d, r.syn.userVoice[0], kVoiceSize);
 		CHECK(saved.op(0, zd::OP_OL) > 0 && live.op(0, zd::OP_OL) == 0);
 		CHECK(saved.op(1, zd::OP_OL) == live.op(1, zd::OP_OL));
-		r.syn.userStatus = -3;                       // unreadable user bank: stays put
+		r.syn.userStatus = -3;                       // unreadable user bank: RESET screen instead of a dead end
 		r.shiftPress(K_D);
+		CHECK(r.ui.slot() == SLOT_SAVE);
+		r.press(K_E);                                // key 3 once only arms it
+		CHECK(r.syn.resets == 0 && r.ui.slot() == SLOT_SAVE);
+		r.press(K_W);                                // any other key disarms
+		r.press(K_E);
+		CHECK(r.syn.resets == 0);
+		r.press(K_E);                                // key 3 twice resets, then the naming screen opens
+		CHECK(r.syn.resets == 1 && r.ui.slot() == SLOT_SAVE && r.syn.userStatus == 1);
+		r.press(K_R);                                // key 4 cancels
 		CHECK(r.ui.slot() == SLOT_FM);
-		r.syn.userStatus = 1;
+		r.syn.userStatus = -3; r.syn.resetResult = -3;
+		r.shiftPress(K_D); r.press(K_E); r.press(K_E);
+		CHECK(r.syn.resets == 2 && r.syn.userStatus == -3 && r.ui.slot() == SLOT_SAVE);   // failed reset: stays on the RESET screen
+		r.press(K_V);                                // key 12 leaves
+		CHECK(r.ui.slot() != SLOT_SAVE);
+		r.syn.userStatus = 1; r.syn.resetResult = 2;
 		r.shiftPress(K_F);                           // op 1 is still muted: the performance is not saved
 		CHECK(r.syn.perfSaves == 0);
 		r.shiftPress(K_E);                           // unmute

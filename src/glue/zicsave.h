@@ -21,6 +21,11 @@ int SaveVoiceToUserSlot(const uint8_t voice[155], int slot);
 // Same name replaces its slot, otherwise the first free slot.
 int SaveVoiceToUserBank(const uint8_t voice[155]);
 
+// A file that is not a bank is never overwritten by a save. ResetUserBank()
+// replaces it: with the .bak from before the last save when that is a good bank
+// (returns 1), else with an empty bank (2). -3 file error.
+int ResetUserBank();
+
 // The bank file as last read or written by this session (4104 bytes), or null
 // when nothing was saved yet.
 const uint8_t* UserBankFile();

@@ -5,6 +5,8 @@
 //             3 Slot (NEW = first free slot, or 1..32 to overwrite), 4 Set (A-Z, 0-9, a-z, symbols)
 //   Keys:     1 cursor left, 2 cursor right, 3 SAVE, 4 CANCEL (key 12 also leaves)
 // The picture is the ten name cells and what the save will do.
+// When the user bank file cannot be read, the same slot shows a RESET screen
+// instead: key 3 twice replaces the file (with its backup when that is good).
 //
 #include "zicpages.h"
 #include "soundhub.h"
@@ -17,6 +19,8 @@ namespace {
 
 const Color WARN = 0xFFB020;
 zd::NameEditor g_ed;
+bool g_reset = false;     // the bank file is unreadable: offer RESET instead of the naming screen
+bool g_armed = false;     // key 3 pressed once on the RESET screen
 
 const char* const kGroupName[5] = { "SPACE", "A-Z", "0-9", "a-z", "SYMBOLS" };
 
@@ -35,6 +39,7 @@ int groupOf(char ch)
 void laneOf(int i, LaneView& out)
 {
 	out.bipolar = false;
+	if (g_reset) { out.label[0] = 0; out.text[0] = 0; out.frac = 0.f; return; }
 	const char ch = g_ed.name()[g_ed.cursor()];
 	switch (i) {
 	case 0: {
@@ -69,6 +74,7 @@ void laneOf(int i, LaneView& out)
 
 bool turnOf(int i, int steps)
 {
+	if (g_reset) return true;
 	const int dir = steps > 0 ? 1 : -1;
 	switch (i) {
 	case 0: g_ed.turnChar(steps); break;
@@ -79,8 +85,19 @@ bool turnOf(int i, int steps)
 	return true;
 }
 
+void drawReset(Ctx& c)
+{
+	Gfx& g = c.g;
+	g.text(10, 46, "USER BANK FILE UNREADABLE", fBody, WARN);
+	g.text(10, 70, "BANK 99 CANNOT BE SAVED TO AS IT IS.", fSmall, WHITE);
+	g.text(10, 86, "RESET RESTORES THE BACKUP IF IT IS GOOD,", fSmall, GREY);
+	g.text(10, 100, "OTHERWISE STARTS AN EMPTY BANK.", fSmall, GREY);
+	g.text(10, 120, g_armed ? "KEY 3 AGAIN TO RESET   KEY 4 CANCELS" : "KEY 3 TWICE = RESET   KEY 4 CANCELS", fSmall, g_armed ? WARN : GREY);
+}
+
 void drawOf(Ctx& c)
 {
+	if (g_reset) { drawReset(c); return; }
 	Gfx& g = c.g;
 	const int cw = 30, x0 = 10, y0 = 50, ch = 40;
 	for (int i = 0; i < zd::kNameLen; i++) {
@@ -138,6 +155,21 @@ void leaveTo(Ctx& c)
 	c.ui.gotoSlot(back == SLOT_SAVE ? SLOT_VOICE : back);
 }
 
+// the naming screen, with the user bank's slot names read fresh
+bool beginNaming(Ctx& c, int preferSlot)
+{
+	char names[zd::kBankSlots][zd::kNameLen + 1];
+	if (c.syn.userBankNames(names) <= 0) return false;
+	SoundHub& h = SoundHub::get();
+	h.bind(c);
+	char nm[zd::kNameLen + 1];
+	h.session().edit().name(nm);
+	g_ed.begin(nm, names);
+	if (preferSlot >= 0) g_ed.setTarget(preferSlot);
+	c.ui.gotoSlot(SLOT_SAVE);
+	return true;
+}
+
 class SavePage : public Page {
 public:
 	const char* name() const override { return "SAVE"; }
@@ -145,7 +177,8 @@ public:
 	const char* const* keyLabels(Ctx&, int) override
 	{
 		static const char* const l[4] = { "< CURSOR", "CURSOR >", "SAVE", "CANCEL" };
-		return l;
+		static const char* const r[4] = { "", "", "RESET", "CANCEL" };
+		return g_reset ? r : l;
 	}
 
 	const char* const* lowerLabels(Ctx&, int) override
@@ -161,6 +194,7 @@ public:
 	bool key(Ctx& c, int, int k, bool down) override
 	{
 		if (!down) return false;
+		if (g_reset) return resetKey(c, k);
 		switch (k) {
 		case K_Q: g_ed.moveCursor(-1); c.ui.redrawPicture(); return true;
 		case K_W: g_ed.moveCursor(1); c.ui.redrawPicture(); return true;
@@ -172,6 +206,35 @@ public:
 	}
 
 private:
+	bool resetKey(Ctx& c, int k)
+	{
+		if (k != K_E) g_armed = false;
+		switch (k) {
+		case K_E:
+			if (!g_armed) {
+				g_armed = true;
+				c.ui.toast("PRESS KEY 3 AGAIN TO RESET");
+				c.ui.redrawPicture();
+				return true;
+			}
+			g_armed = false;
+			doReset(c);
+			return true;
+		case K_R: c.ui.toast("RESET CANCELLED"); leaveTo(c); return true;
+		case K_Q: case K_W: case K_A: case K_S: c.ui.redrawPicture(); return true;
+		default: c.ui.redrawPicture(); return false;
+		}
+	}
+
+	void doReset(Ctx& c)
+	{
+		const int rc = c.syn.resetUserBank();
+		if (rc < 0) { c.ui.toast("RESET FAILED - SD CARD"); return; }
+		c.ui.toast(rc == 1 ? "BANK 99 RESTORED FROM BACKUP" : "BANK 99 RESET - EMPTY");
+		g_reset = false;
+		if (!beginNaming(c, -1)) leaveTo(c);
+	}
+
 	void save(Ctx& c)
 	{
 		if (!g_ed.nameOk()) { c.ui.toast("GIVE IT A NAME FIRST"); return; }
@@ -203,19 +266,20 @@ private:
 
 bool OpenSaveScreen(Ctx& c, int preferSlot)
 {
-	char names[zd::kBankSlots][zd::kNameLen + 1];
-	const int rc = c.syn.userBankNames(names);
-	if (rc <= 0) {
-		c.ui.toast(rc == 0 ? "SAVE VOICE - NOT IN THIS BUILD" : "USER BANK FILE UNREADABLE");
+	g_reset = false;
+	g_armed = false;
+	char probe[zd::kBankSlots][zd::kNameLen + 1];
+	const int rc = c.syn.userBankNames(probe);
+	if (rc == 0) {
+		c.ui.toast("SAVE VOICE - NOT IN THIS BUILD");
 		return false;
 	}
-	SoundHub& h = SoundHub::get();
-	h.bind(c);
-	char nm[zd::kNameLen + 1];
-	h.session().edit().name(nm);
-	g_ed.begin(nm, names);
-	if (preferSlot >= 0) g_ed.setTarget(preferSlot);
-	c.ui.gotoSlot(SLOT_SAVE);
+	if (rc < 0) {                  // unreadable file: no dead end, offer the reset
+		g_reset = true;
+		c.ui.gotoSlot(SLOT_SAVE);
+		return true;
+	}
+	if (!beginNaming(c, preferSlot)) return false;
 	return true;
 }
 

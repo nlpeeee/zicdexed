@@ -12,19 +12,75 @@ namespace {
 #define ZIC_USER_BANK_PATH "/sysex/voice/000099_ZICUSER.syx"
 #endif
 const char kPath[] = ZIC_USER_BANK_PATH;
+// A save goes to kTmp first, then replaces kPath; kBak holds the file before the
+// last save. (FAT rename does not overwrite, so the old file is moved aside first.)
+const char kTmp[] = ZIC_USER_BANK_PATH ".tmp";
+const char kBak[] = ZIC_USER_BANK_PATH ".bak";
 uint8_t g_File[zd::kBankFileSize];     // scratch: the file being read or edited
 uint8_t g_Served[zd::kBankFileSize];   // the bank as of our last save
 bool g_HaveServed = false;
 
+// Reads `path` into `out`; true when it is a complete bank file.
+bool ReadBank(const char* path, uint8_t out[zd::kBankFileSize])
+{
+	FILE* f = fopen(path, "rb");
+	if (!f) return false;
+	uint8_t buf[zd::kBankFileSize];
+	const size_t n = fread(buf, 1, sizeof buf, f);
+	fclose(f);
+	if (!zd::IsBankFile(buf, (int)n)) return false;
+	memcpy(out, buf, zd::kBankFileSize);
+	return true;
+}
+
+bool Exists(const char* path)
+{
+	FILE* f = fopen(path, "rb");
+	if (f) fclose(f);
+	return f != nullptr;
+}
+
+// Writes `data` to kTmp and reads it back, so a short write never gets to replace the bank.
+bool WriteTmp(const uint8_t data[zd::kBankFileSize])
+{
+	FILE* f = fopen(kTmp, "wb");
+	if (!f) return false;
+	const size_t w = fwrite(data, 1, zd::kBankFileSize, f);
+	const int rc = fclose(f);
+	if (w != (size_t)zd::kBankFileSize || rc != 0) { remove(kTmp); return false; }
+	uint8_t back[zd::kBankFileSize];
+	if (!ReadBank(kTmp, back) || memcmp(back, data, sizeof back) != 0) { remove(kTmp); return false; }
+	return true;
+}
+
+// Replaces the bank file with `data`. The previous good file stays as kBak. On any
+// failure the old file is still in place (or recoverable by LoadFile).
+bool WriteSafely(const uint8_t data[zd::kBankFileSize], bool keepOld)
+{
+	if (!WriteTmp(data)) return false;
+	if (Exists(kPath)) {
+		if (keepOld) {
+			remove(kBak);
+			if (rename(kPath, kBak) != 0) { remove(kTmp); return false; }
+		} else if (remove(kPath) != 0) { remove(kTmp); return false; }
+	}
+	if (rename(kTmp, kPath) != 0) {
+		if (keepOld && Exists(kBak)) rename(kBak, kPath);     // put the old one back
+		remove(kTmp);
+		return false;
+	}
+	return true;
+}
+
 // 1 = loaded, 0 = no file (g_File = a fresh bank), -1 = a file we do not understand
 int LoadFile()
 {
-	FILE* f = fopen(kPath, "rb");
-	if (!f) { zd::InitBankFile(g_File); return 0; }
-	size_t n = fread(g_File, 1, sizeof g_File, f);
-	fclose(f);
-	if (!zd::IsBankFile(g_File, (int)n)) return -1;
-	return 1;
+	if (ReadBank(kPath, g_File)) return 1;
+	if (Exists(kPath)) return -1;
+	// no bank file: a save may have been cut between its two renames (.tmp is the new file, complete)
+	if (ReadBank(kTmp, g_File) && rename(kTmp, kPath) == 0) return 1;
+	zd::InitBankFile(g_File);
+	return 0;
 }
 }
 
@@ -49,11 +105,7 @@ int SaveVoiceToUserSlot(const uint8_t voice[155], int slot)
 	memcpy(v.d, voice, zd::kVoiceSize);
 	zd::StoreVoice(g_File, slot, v);
 
-	FILE* f = fopen(kPath, "wb");
-	if (!f) return -3;
-	const size_t w = fwrite(g_File, 1, sizeof g_File, f);
-	const int rc = fclose(f);
-	if (w != sizeof g_File || rc != 0) return -3;
+	if (!WriteSafely(g_File, true)) return -3;
 	memcpy(g_Served, g_File, sizeof g_Served);
 	g_HaveServed = true;
 	return slot;
@@ -69,6 +121,19 @@ int SaveVoiceToUserBank(const uint8_t voice[155])
 	const int slot = zd::FindSaveSlot(g_File, name);
 	if (slot < 0) return -2;
 	return SaveVoiceToUserSlot(voice, slot);
+}
+
+int ResetUserBank()
+{
+	uint8_t bak[zd::kBankFileSize];
+	const bool haveBak = ReadBank(kBak, bak);
+	if (haveBak) memcpy(g_File, bak, sizeof g_File);
+	else zd::InitBankFile(g_File);
+	// the broken file is replaced, not kept as the backup
+	if (!WriteSafely(g_File, false)) return -3;
+	memcpy(g_Served, g_File, sizeof g_Served);
+	g_HaveServed = true;
+	return haveBak ? 1 : 2;
 }
 
 const uint8_t* UserBankFile() { return g_HaveServed ? g_Served : nullptr; }

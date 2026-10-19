@@ -24,7 +24,8 @@ bool SoundDesignDirty(Ctx& c);
 bool SoundDesignCompare(Ctx& c, int tg, bool begin);
 
 // Shift+7: opens the naming screen (SLOT_SAVE) for the current TG's edit voice.
-// Toasts and returns false when the user bank cannot be used.
+// Toasts and returns false in a build without SAVE VOICE. An unreadable bank file
+// opens the screen in RESET mode (key 3 twice).
 bool OpenSaveScreen(Ctx& c, int preferSlot = -1);   // preferSlot: user-bank slot to overwrite by default
 
 // Called once at start-up: puts every page of this build into its slot.

@@ -146,6 +146,42 @@ static void test_save_file()
 	CHECK(zic::SaveVoiceToUserBank(v.d) == -3);
 	f = fopen(ZIC_USER_BANK_PATH, "rb"); n = fread(buf, 1, sizeof buf, f); fclose(f);
 	CHECK(n == 4);
+	// ResetUserBank: no backup gives an empty bank, a good .bak is restored
+	char bakPath[128], tmpPath[128];
+	snprintf(bakPath, sizeof bakPath, "%s.bak", ZIC_USER_BANK_PATH);
+	snprintf(tmpPath, sizeof tmpPath, "%s.tmp", ZIC_USER_BANK_PATH);
+	unlink(bakPath); unlink(tmpPath);
+	CHECK(zic::ResetUserBank() == 2);
+	f = fopen(ZIC_USER_BANK_PATH, "rb"); n = fread(buf, 1, sizeof buf, f); fclose(f);
+	CHECK(n == (size_t)kBankFileSize && IsBankFile(buf, (int)n));
+	char names0[32][11];
+	CHECK(zic::ReadUserBankNames(names0) && strcmp(names0[0], "INIT VOICE") == 0);
+	// every save keeps the file before it as .bak and leaves no .tmp behind
+	unlink(ZIC_USER_BANK_PATH); unlink(bakPath);
+	Voice k1 = Voice::Init(); k1.setName("FIRST");
+	Voice k2 = Voice::Init(); k2.setName("SECOND");
+	CHECK(zic::SaveVoiceToUserBank(k1.d) == 0);
+	CHECK(access(bakPath, F_OK) != 0);                           // nothing to back up yet
+	CHECK(zic::SaveVoiceToUserBank(k2.d) == 1);
+	CHECK(access(tmpPath, F_OK) != 0 && access(bakPath, F_OK) == 0);
+	f = fopen(bakPath, "rb"); n = fread(buf, 1, sizeof buf, f); fclose(f);
+	CHECK(n == (size_t)kBankFileSize && IsBankFile(buf, (int)n) && SlotIsFree(buf, 1) && !SlotIsFree(buf, 0));
+	// a broken bank file: saves refuse, RESET restores the .bak (the bank before the last save)
+	f = fopen(ZIC_USER_BANK_PATH, "wb"); fwrite("junk", 1, 4, f); fclose(f);
+	CHECK(zic::SaveVoiceToUserBank(k2.d) == -3);
+	char names1[32][11];
+	CHECK(!zic::ReadUserBankNames(names1));
+	CHECK(zic::ResetUserBank() == 1);
+	CHECK(zic::ReadUserBankNames(names1) && strcmp(names1[0], "FIRST     ") == 0 && strcmp(names1[1], "INIT VOICE") == 0);
+	// a broken .bak is not restored
+	f = fopen(bakPath, "wb"); fwrite("junk", 1, 4, f); fclose(f);
+	f = fopen(ZIC_USER_BANK_PATH, "wb"); fwrite("junk", 1, 4, f); fclose(f);
+	CHECK(zic::ResetUserBank() == 2);
+	// a save cut between its renames: no bank file, a good .tmp is picked up
+	CHECK(zic::SaveVoiceToUserBank(k1.d) == 0);
+	rename(ZIC_USER_BANK_PATH, tmpPath);
+	CHECK(zic::ReadUserBankNames(names1) && strcmp(names1[0], "FIRST     ") == 0);
+	unlink(bakPath); unlink(tmpPath);
 	// fill the bank
 	unlink(ZIC_USER_BANK_PATH);
 	for (int i = 0; i < 32; i++) { char nm[11]; snprintf(nm, sizeof nm, "V%02d", i); Voice x = Voice::Init(); x.setName(nm); CHECK(zic::SaveVoiceToUserBank(x.d) == i); }
