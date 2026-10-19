@@ -9,7 +9,8 @@ const Color kTGColor[kMaxTG] = {
 	0xBEFF28, 0xFF6E1E, 0x28D2FF, 0xFF3C96, 0xFFDC28, 0x966EFF, 0x3CF0AA, 0xFF4646,
 };
 
-static const char* const kSlotNames[kSlotCount] = { "VOICE", "FM", "OPS", "MOD", "BROWSE", "MIX", "KEYS" };
+static const Color WARN = 0xFFB020;   // the dirty dot
+static const char* const kSlotNames[kSlotCount] = { "VOICE", "FM", "OPS", "MOD", "BROWSE", "MIX", "KEYS", "SAVE" };
 // The key label of the active page names the sub-page it is on, so MOD reads FX when you are on FX.
 static const char* subLabel(Slot s, int sub, int count)
 {
@@ -19,6 +20,9 @@ static const char* subLabel(Slot s, int sub, int count)
 }
 const char* slotName(Slot s) { return kSlotNames[s]; }
 
+// Keys 5-12 on the pages that do not say otherwise.
+static const char* const kLowerKeys[8] = { "TG-", "TG+", "BRWS", "MIX", "SHFT", "PLAY", "COMP", "EXIT" };
+
 static const char* const kPageKeys[4] = { "VOICE", "FM", "OPS", "MOD" };
 
 // Shift map (mockup 09): what each key does with and without Shift.
@@ -26,7 +30,7 @@ struct KeyDef { const char* shifted; const char* normal; };
 static const KeyDef kKeyDefs[kKeyCount] = {
 	{ "INIT", "voice" },     { "MUTATE", "fm" },       { "OP MUTE", "ops" },    { "FX", "mod" },
 	{ "TG MUTE", "< tg" },   { "TG SOLO", "tg >" },    { "SAVE VCE", "browse" }, { "SAVE PRF", "mix" },
-	{ "SHIFT", "shift" },    { "KEYS", "play" },       { "REVERT", "compare" }, { "MENU", "exit" },
+	{ "SHIFT", "shift" },    { "KEYS", "play" },       { "UNDO", "compare" }, { "MENU", "exit" },
 };
 
 static void upper(char* dst, const char* src, int n)
@@ -37,10 +41,10 @@ static void upper(char* dst, const char* src, int n)
 }
 
 Ui::Ui(Gfx& g, ISynth& syn)
-	: g_(g), syn_(syn), slot_(SLOT_VOICE), tg_(0), now_(0),
+	: g_(g), syn_(syn), slot_(SLOT_VOICE), prev_(SLOT_VOICE), tg_(0), now_(0),
 	  shift_(false), mapShown_(false), mapHidden_(false), shiftDownMs_(0),
 	  suspended_(false), menuReq_(false),
-	  lastLaneMs_(0), lastTickMs_(0), toastUntil_(0), toastOn_(false),
+	  lastLaneMs_(0), lastTickMs_(0), toastUntil_(0), toastOn_(false), toastKeep_(false), lastMuteMs_(0),
 	  playing_(false), comparing_(false), playTG_(0), playNote_(60), compareTG_(0),
 	  vDownMs_(0), vDown_(false), vFired_(false)
 {
@@ -78,6 +82,16 @@ void Ui::applyMutes()
 	for (int i = 0; i < syn_.tgCount() && i < kMaxTG; i++) syn_.setMute(i, muted_[i] || (solo && !solo_[i]));
 }
 
+// A performance load or a MIDI expression message (CC 11) can lift a muted TG's gain
+// behind our back, so keep re-asserting it. Only silenced TGs are touched: the
+// others keep whatever expression the MIDI player has set.
+void Ui::reassertMutes()
+{
+	bool solo = anySolo();
+	for (int i = 0; i < syn_.tgCount() && i < kMaxTG; i++)
+		if (muted_[i] || (solo && !solo_[i])) syn_.setMute(i, true);
+}
+
 void Ui::toggleMute(int tg) { muted_[tg] = !muted_[tg]; applyMutes(); }
 void Ui::toggleSolo(int tg) { solo_[tg] = !solo_[tg]; applyMutes(); }
 
@@ -109,6 +123,7 @@ void Ui::gotoSlot(Slot s)
 		else return;
 	} else {
 		if (page()) { Ctx lc = ctx(); page()->leave(lc, sub_[slot_]); }
+		prev_ = slot_;
 		slot_ = s;
 		sub_[s] = 0;
 	}
@@ -131,6 +146,7 @@ void Ui::gotoSub(Slot s, int sub)
 void Ui::drawLane(int i)
 {
 	Ctx c = ctx();
+	if (i == 3) dirty_ = SoundDesignDirty(c);
 	LaneView v{};
 	if (page()) page()->lane(c, sub_[slot_], i, v);
 	shown_[i] = v;
@@ -163,6 +179,7 @@ void Ui::drawLane(int i)
 		if (w < 2) w = 2;
 		g_.roundRect((float)bx, (float)by, w, 3, 1, hot ? INK : a);
 	}
+	if (i == 3 && dirty_) g_.roundRect((float)(W - 10), 4, 6, 6, 3, hot ? INK : WARN);
 	if (i && !hot && !(touchedMs_[i - 1] != 0 && now_ - touchedMs_[i - 1] < 600)) g_.vline(x, 6, 32, LINE);
 }
 
@@ -172,20 +189,22 @@ void Ui::refreshLanes(bool force)
 {
 	if (!page()) return;
 	Ctx c = ctx();
+	const bool dirtyNow = SoundDesignDirty(c);
 	for (int i = 0; i < 4; i++) {
 		LaneView v{};
 		page()->lane(c, sub_[slot_], i, v);
 		bool hot = touchedMs_[i] != 0 && now_ - touchedMs_[i] < 600;
 		if (!hot && touchedMs_[i]) touchedMs_[i] = 0;
 		bool same = !force && hot == shownHot_[i] && !strcmp(v.label, shown_[i].label) && !strcmp(v.text, shown_[i].text)
-		            && (int)(v.frac * 66) == (int)(shown_[i].frac * 66) && v.bipolar == shown_[i].bipolar;
+		            && (int)(v.frac * 66) == (int)(shown_[i].frac * 66) && v.bipolar == shown_[i].bipolar
+		            && (i != 3 || dirtyNow == dirty_);
 		if (!same) drawLane(i);
 	}
 }
 
 void Ui::drawFooter()
 {
-	const int y = kBandTop + 2;
+	const int y = kBandTop + 1;
 	g_.fillRect(0, kBandTop, W, H - kBandTop, BG);
 	g_.hline(0, kBandTop, W, LINE);
 	Ctx c = ctx();
@@ -195,7 +214,7 @@ void Ui::drawFooter()
 	for (int i = 0; i < 4; i++) {
 		int x = i * 80;
 		bool on = pageKeys && (int)slot_ == i;
-		if (on) g_.roundRect((float)x + 2, (float)y - 1, 76, 14, 3, accent());
+		if (on) g_.roundRect((float)x + 2, (float)y - 1, 76, 12, 3, accent());
 		Color col = on ? INK : (!labs[i] || !labs[i][0] ? DIM : (pageKeys && !pages_[i] ? DIM : GREY));
 		const char* lab = labs[i];
 		if (on && page()) { const char* sl = subLabel(slot_, sub_[slot_], page()->subCount()); if (sl) lab = sl; }
@@ -206,7 +225,29 @@ void Ui::drawFooter()
 				g_.roundRect((float)(x + 70 - (n - 1 - k) * 5), (float)y + 4, 3, 3, 1, k == sub_[slot_] ? INK : mix(accent(), INK, 150));
 		}
 	}
+	// Second row: keys 5-12 as one strip, each led by its key number.
+	const char* const* low = page() ? page()->lowerLabels(c, sub_[slot_]) : nullptr;
+	if (!low) low = kLowerKeys;
+	for (int idx = 0; idx < 8; idx++) {
+		if (!low[idx] || !low[idx][0]) continue;
+		char t[16];
+		const int key = idx + 5;
+		int n = 0;
+		if (key >= 10) t[n++] = '1';
+		t[n++] = (char)('0' + (key >= 10 ? key - 10 : key));
+		t[n++] = ' ';
+		strcpy(t + n, low[idx]);
+		const bool here = (idx == 2 && slot_ == SLOT_BROWSE) || (idx == 3 && slot_ == SLOT_MIX);
+		g_.textAligned(idx * 40, kBandTop + 14, 40, t, fTiny, here ? accent() : GREY, AL_CENTER, 0.f);
+	}
 	if (toastOn_) showToast();
+}
+
+void Ui::drawTGTag()
+{
+	char t[8] = { 'T', 'G', ' ', (char)('1' + tg_), 0 };
+	g_.roundRect((float)(W - 36), (float)kPicTop + 1, 32, 13, 3, BG, dim(accent(), 150), 1.f);
+	g_.textAligned(W - 36, kPicTop + 2, 32, t, fLbl, accent(), AL_CENTER, 0.f);
 }
 
 void Ui::showToast()
@@ -220,13 +261,16 @@ void Ui::showToast()
 	g_.textAligned(x, kBandTop + 5, w, t, fLbl, INK, AL_CENTER, 1.f);
 }
 
-void Ui::clearToast() { toastOn_ = false; toastUntil_ = 0; if (!mapShown_) drawFooter(); else g_.fillRect(0, kBandTop, W, H - kBandTop, BG); }
+void Ui::toastError(const char* text) { toast(text, 0); toastKeep_ = true; }
+
+void Ui::clearToast() { toastKeep_ = false; toastOn_ = false; toastUntil_ = 0; if (!mapShown_) drawFooter(); else g_.fillRect(0, kBandTop, W, H - kBandTop, BG); }
 
 void Ui::toast(const char* text, uint32_t ms)
 {
 	strncpy(toast_, text, sizeof toast_ - 1);
 	toast_[sizeof toast_ - 1] = 0;
 	toastOn_ = true;
+	toastKeep_ = false;
 	toastUntil_ = ms ? now_ + ms : 0;
 	if (!suspended_) showToast();
 }
@@ -238,7 +282,7 @@ void Ui::drawMap()
 	g_.text(70, 7, "encoders: fine steps", fSmall, GREY);
 	char net[32];
 	syn_.netStatus(net);
-	if (net[0]) g_.textAligned(0, 7, W - 6, net, fSmall, dim(accent(), 200), AL_RIGHT);
+	if (net[0]) g_.textAligned(0, 7, W - 6, net, fSmall, dim(accent(), 240), AL_RIGHT);
 	const int kw = 76, kh = 36;
 	for (int r = 0; r < 3; r++) {
 		for (int c = 0; c < 4; c++) {
@@ -262,6 +306,7 @@ void Ui::redrawPicture()
 	if (!page()) return;
 	Ctx c = ctx();
 	page()->draw(c, sub_[slot_]);
+	drawTGTag();
 }
 
 void Ui::redrawAll()
@@ -270,7 +315,7 @@ void Ui::redrawAll()
 	if (mapShown_) { drawMap(); return; }
 	g_.clear(BG);
 	drawLanes();
-	if (page()) { Ctx c = ctx(); page()->draw(c, sub_[slot_]); }
+	if (page()) { Ctx c = ctx(); page()->draw(c, sub_[slot_]); drawTGTag(); }
 	else g_.textAligned(0, 90, W, "NO PAGE", fBody, DIM, AL_CENTER, 1.f);
 	drawFooter();
 }
@@ -295,6 +340,8 @@ void Ui::key(int k, bool down, uint32_t nowMs)
 	now_ = nowMs;
 	if (suspended_ || k < 0 || k >= kKeyCount) return;
 
+	if (down && toastKeep_) clearToast();         // an error stays until the next key
+
 	if (k == K_Z) {
 		shift_ = down;
 		if (down) { shiftDownMs_ = nowMs; mapHidden_ = false; }
@@ -307,7 +354,8 @@ void Ui::key(int k, bool down, uint32_t nowMs)
 		if (page()) page()->key(c, sub_[slot_], k, false);
 		if (k == K_X && playing_) { syn_.noteOff(playTG_, playNote_); playing_ = false; }
 		if (k == K_C && comparing_) {
-			syn_.compareEnd(compareTG_);
+			Ctx cc = ctx();
+			if (!SoundDesignCompare(cc, compareTG_, false)) syn_.compareEnd(compareTG_);
 			comparing_ = false;
 			clearToast();
 			redrawAll();
@@ -339,7 +387,8 @@ void Ui::normalKey(int k)
 		if (!comparing_) {
 			comparing_ = true;
 			compareTG_ = tg_;
-			syn_.compareBegin(tg_);
+			Ctx cc = ctx();
+			if (!SoundDesignCompare(cc, tg_, true)) syn_.compareBegin(tg_);
 			toast("COMPARE - STORED VOICE", 0);
 			redrawAll();
 		}
@@ -364,7 +413,7 @@ void Ui::shiftKey(int k)
 	case K_D: { Ctx c = ctx(); if (!SoundDesignShiftKey(c, k)) toast("SAVE VOICE - NOT IN THIS BUILD"); break; }
 	case K_F: { Ctx c = ctx(); if (!SoundDesignShiftKey(c, k)) toast("SAVE PERFORMANCE - NOT IN THIS BUILD"); break; }
 	case K_X: gotoSlot(SLOT_KEYS); break;
-	case K_C: syn_.revert(tg_); toast("REVERTED"); redrawAll(); break;
+	case K_C: { Ctx c = ctx(); if (!SoundDesignShiftKey(c, k)) { syn_.revert(tg_); toast("REVERTED"); redrawAll(); } break; }
 	case K_V: menuReq_ = true; suspended_ = true; break;
 	default: break;
 	}
@@ -382,6 +431,7 @@ void Ui::tick(uint32_t nowMs)
 		toast("PANIC - ALL NOTES OFF");
 	}
 	if (toastOn_ && toastUntil_ && (int32_t)(now_ - toastUntil_) >= 0) clearToast();
+	if (now_ - lastMuteMs_ >= 100) { lastMuteMs_ = now_; reassertMutes(); }
 	if (mapShown_) return;
 
 	if (now_ - lastLaneMs_ >= 100) {

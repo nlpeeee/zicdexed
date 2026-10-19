@@ -5,6 +5,7 @@
 #include "../src/logic/shift_map.h"
 #include "../src/logic/alg_layout.h"
 #include "../src/logic/voice_pack.h"
+#include "../src/logic/name_editor.h"
 #include "../src/glue/zicsave.h"
 #include <unistd.h>
 
@@ -104,6 +105,8 @@ static void test_pack()
 		PackVoice(v, packed);
 		Unpack(packed, back);
 		CHECK(memcmp(back, v.d, kVoiceSize) == 0);
+		Voice u; UnpackVoice(packed, u);                 // our inverse agrees with MiniDexed's
+		CHECK(memcmp(u.d, back, kVoiceSize) == 0);
 	}
 	uint8_t file[kBankFileSize];
 	InitBankFile(file);
@@ -143,12 +146,121 @@ static void test_save_file()
 	CHECK(zic::SaveVoiceToUserBank(v.d) == -3);
 	f = fopen(ZIC_USER_BANK_PATH, "rb"); n = fread(buf, 1, sizeof buf, f); fclose(f);
 	CHECK(n == 4);
+	// ResetUserBank: no backup gives an empty bank, a good .bak is restored
+	char bakPath[128], tmpPath[128];
+	snprintf(bakPath, sizeof bakPath, "%s.bak", ZIC_USER_BANK_PATH);
+	snprintf(tmpPath, sizeof tmpPath, "%s.tmp", ZIC_USER_BANK_PATH);
+	unlink(bakPath); unlink(tmpPath);
+	CHECK(zic::ResetUserBank() == 2);
+	f = fopen(ZIC_USER_BANK_PATH, "rb"); n = fread(buf, 1, sizeof buf, f); fclose(f);
+	CHECK(n == (size_t)kBankFileSize && IsBankFile(buf, (int)n));
+	char names0[32][11];
+	CHECK(zic::ReadUserBankNames(names0) && strcmp(names0[0], "INIT VOICE") == 0);
+	// every save keeps the file before it as .bak and leaves no .tmp behind
+	unlink(ZIC_USER_BANK_PATH); unlink(bakPath);
+	Voice k1 = Voice::Init(); k1.setName("FIRST");
+	Voice k2 = Voice::Init(); k2.setName("SECOND");
+	CHECK(zic::SaveVoiceToUserBank(k1.d) == 0);
+	CHECK(access(bakPath, F_OK) != 0);                           // nothing to back up yet
+	CHECK(zic::SaveVoiceToUserBank(k2.d) == 1);
+	CHECK(access(tmpPath, F_OK) != 0 && access(bakPath, F_OK) == 0);
+	f = fopen(bakPath, "rb"); n = fread(buf, 1, sizeof buf, f); fclose(f);
+	CHECK(n == (size_t)kBankFileSize && IsBankFile(buf, (int)n) && SlotIsFree(buf, 1) && !SlotIsFree(buf, 0));
+	// a broken bank file: saves refuse, RESET restores the .bak (the bank before the last save)
+	f = fopen(ZIC_USER_BANK_PATH, "wb"); fwrite("junk", 1, 4, f); fclose(f);
+	CHECK(zic::SaveVoiceToUserBank(k2.d) == -3);
+	char names1[32][11];
+	CHECK(!zic::ReadUserBankNames(names1));
+	CHECK(zic::ResetUserBank() == 1);
+	CHECK(zic::ReadUserBankNames(names1) && strcmp(names1[0], "FIRST     ") == 0 && strcmp(names1[1], "INIT VOICE") == 0);
+	// a broken .bak is not restored
+	f = fopen(bakPath, "wb"); fwrite("junk", 1, 4, f); fclose(f);
+	f = fopen(ZIC_USER_BANK_PATH, "wb"); fwrite("junk", 1, 4, f); fclose(f);
+	CHECK(zic::ResetUserBank() == 2);
+	// a save cut between its renames: no bank file, a good .tmp is picked up
+	CHECK(zic::SaveVoiceToUserBank(k1.d) == 0);
+	rename(ZIC_USER_BANK_PATH, tmpPath);
+	CHECK(zic::ReadUserBankNames(names1) && strcmp(names1[0], "FIRST     ") == 0);
+	unlink(bakPath); unlink(tmpPath);
 	// fill the bank
 	unlink(ZIC_USER_BANK_PATH);
 	for (int i = 0; i < 32; i++) { char nm[11]; snprintf(nm, sizeof nm, "V%02d", i); Voice x = Voice::Init(); x.setName(nm); CHECK(zic::SaveVoiceToUserBank(x.d) == i); }
 	Voice y = Voice::Init(); y.setName("ONE TOO MANY");
 	CHECK(zic::SaveVoiceToUserBank(y.d) == -2);
 	unlink(ZIC_USER_BANK_PATH);
+	// explicit slots, the slot-name listing and the served copy
+	char names[32][11];
+	CHECK(zic::UserBankFile() != nullptr);                       // an earlier save left one
+	CHECK(zic::ReadUserBankNames(names) && strcmp(names[0], "INIT VOICE") == 0);   // no file: all free
+	Voice z = Voice::Init(); z.set(G_ALG, 9); z.setName("PICKED");
+	CHECK(zic::SaveVoiceToUserSlot(z.d, 5) == 5);
+	CHECK(zic::SaveVoiceToUserSlot(z.d, -1) == 0);               // first free
+	CHECK(zic::SaveVoiceToUserSlot(z.d, 32) == -3);
+	CHECK(zic::ReadUserBankNames(names));
+	CHECK(strcmp(names[5], "PICKED    ") == 0 && strcmp(names[0], "PICKED    ") == 0 && strcmp(names[1], "INIT VOICE") == 0);
+	const uint8_t* served = zic::UserBankFile();
+	CHECK(served && IsBankFile(served, kBankFileSize));
+	Voice rb; UnpackVoice(served + 6 + 5 * kPackedVoice, rb);
+	CHECK(rb == z);
+	char sn[11]; SlotName(served, 5, sn); CHECK(strcmp(sn, "PICKED    ") == 0);
+	CHECK(SlotIsFree(served, 1) && !SlotIsFree(served, 5));
+	unlink(ZIC_USER_BANK_PATH);
+}
+
+static void test_name_editor()
+{
+	char names[kBankSlots][kNameLen + 1];
+	for (int i = 0; i < kBankSlots; i++) strcpy(names[i], "INIT VOICE");
+	strcpy(names[0], "BASS ONE  ");
+	strcpy(names[2], "LEAD      ");
+	NameEditor e;
+	e.begin("NEW SOUND ", names);
+	CHECK(strcmp(e.name(), "NEW SOUND ") == 0 && e.cursor() == 0);
+	CHECK(e.target() == -1 && e.slot() == 1 && !e.overwrites());   // next free slot
+	e.turnChar(1);                                  // N -> O
+	CHECK(e.name()[0] == 'O');
+	e.turnChar(-1); e.turnChar(-1);
+	CHECK(e.name()[0] == 'M');
+	e.moveCursor(-1); CHECK(e.cursor() == 0);
+	for (int i = 0; i < 20; i++) e.moveCursor(1);
+	CHECK(e.cursor() == kNameLen - 1);
+	e.moveCursor(-9);
+	e.jumpGroup(1);                                 // letters -> digits
+	CHECK(e.name()[0] == '0');
+	e.jumpGroup(1); CHECK(e.name()[0] == 'a');
+	e.jumpGroup(1); CHECK(e.name()[0] == '-');
+	e.jumpGroup(1); CHECK(e.name()[0] == ' ');
+	e.jumpGroup(1); CHECK(e.name()[0] == 'A');
+	e.jumpGroup(-1); CHECK(e.name()[0] == ' ');
+	// every character stays inside the charset, wrapping both ways
+	for (int i = 0; i < NameEditor::charsetSize() + 3; i++) e.turnChar(1);
+	CHECK(strchr(NameEditor::charset(), e.name()[0]) != nullptr);
+	e.turnChar(-1000);
+	CHECK(strchr(NameEditor::charset(), e.name()[0]) != nullptr);
+	// the target follows the name until the user picks a slot
+	e.begin("LEAD      ", names);
+	CHECK(e.target() == 2 && e.overwrites() && e.slot() == 2);
+	e.turnChar(1);
+	CHECK(e.target() == -1 && !e.overwrites());
+	e.turnTarget(1); CHECK(e.target() == 0 && e.overwrites());      // slot 1 holds BASS ONE
+	e.turnChar(1);
+	CHECK(e.target() == 0);                          // manual choice sticks
+	e.turnTarget(-5); CHECK(e.target() == -1);
+	e.turnTarget(100); CHECK(e.target() == kBankSlots - 1 && !e.overwrites());
+	// a name must be set; the free-slot marker is not a name
+	e.begin("          ", names); CHECK(!e.nameOk());
+	e.begin("INIT VOICE", names); CHECK(!e.nameOk());
+	e.begin("X         ", names); CHECK(e.nameOk());
+	char t[11]; e.trimmed(t); CHECK(strcmp(t, "X") == 0);
+	// non-ASCII bytes and short names are tidied
+	char odd[11] = { 'A', (char)0xE9, 'B', 0, 'Z', 0, 0, 0, 0, 0, 0 };
+	e.begin(odd, names);
+	CHECK(strcmp(e.name(), "A B       ") == 0);
+	// a full bank has no free slot
+	for (int i = 0; i < kBankSlots; i++) snprintf(names[i], 11, "FILL%02d    ", i);
+	e.begin("NEW       ", names);
+	CHECK(e.slot() == -1 && e.freeSlot() == -1);
+	e.turnTarget(4); CHECK(e.slot() == 3 && e.overwrites());
 }
 
 static void test_layout()
@@ -279,6 +391,36 @@ static void test_session()
 	CHECK(s.dirty());
 	s.revert();
 	CHECK(s.edit() == v);
+
+	// UNDO: one slot for INIT / MUTATE / load; a save or (for a load) a tweak clears it
+	s.clearUndo();
+	CHECK(s.undo() == EditSession::UNDO_NONE);
+	s.setParam(G_FB, 3);
+	Voice tweaked = s.edit();
+	s.init();
+	CHECK(s.undoKind() == EditSession::UNDO_INIT && s.edit() == Voice::Init());
+	CHECK(s.undo() == EditSession::UNDO_INIT && s.edit() == tweaked && sink.last == tweaked);
+	CHECK(s.undo() == EditSession::UNDO_NONE);
+	s.mutate(100);
+	CHECK(s.undoKind() == EditSession::UNDO_MUTATE);
+	s.compareBegin();
+	CHECK(s.undo() == EditSession::UNDO_NONE);       // locked while COMPARE is held
+	s.compareEnd();
+	CHECK(s.undo() == EditSession::UNDO_MUTATE && s.edit() == tweaked);
+	s.mutate(100);
+	s.markSaved();
+	CHECK(s.undoKind() == EditSession::UNDO_NONE);
+	s.revert();
+	Voice other = Voice::Init(); other.set(G_FB, 6);
+	s.load(other);
+	CHECK(s.undoKind() == EditSession::UNDO_LOAD && !s.dirty());
+	s.setParam(G_FB, 2);
+	CHECK(s.undoKind() == EditSession::UNDO_NONE);   // tweaked after the load: nothing to jump back to
+	s.load(v);
+	s.load(other);
+	CHECK(s.undo() == EditSession::UNDO_LOAD && s.edit() == v && s.stored() == v && !s.dirty());
+	s.load(v);                                       // loading the voice that is already there is not undoable
+	CHECK(s.undoKind() == EditSession::UNDO_NONE);
 
 	// macros: set, bake on direct edit, return-to-zero
 	s.setMacro(M_SNARL, 99);
@@ -462,7 +604,7 @@ static void test_pages()
 
 int main()
 {
-	test_voice(); test_pack(); test_save_file(); test_layout(); test_macros(); test_mutate(); test_session(); test_keys(); test_browse(); test_pages();
+	test_voice(); test_pack(); test_save_file(); test_name_editor(); test_layout(); test_macros(); test_mutate(); test_session(); test_keys(); test_browse(); test_pages();
 	printf("%d checks, %d failed\n", g_checks, g_fail);
 	return g_fail ? 1 : 0;
 }

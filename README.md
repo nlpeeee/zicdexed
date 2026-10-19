@@ -1,18 +1,67 @@
 # ZicDexed
 
-MiniDexed (8 x DX7 FM synth, bare metal) for the **ZicPixel** hardware. It uses the 320x170 screen, all 4 encoders and all 12 keys, with a control layout taken from zicBox.
+**An 8-voice FM monster in a box with 12 keys and 4 knobs.**
 
-Hardware: Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS, SPI mode 3), PCM5102 I2S DAC, 4 encoders without push (26/13, 6/5, 0/9, 27/4), 12 keys, numbered 1-12 from top left to bottom right, on GPIO 20 16 25 14 / 12 1 24 15 / 7 8 23 22 (active low).
+ZicDexed is [MiniDexed](https://github.com/probonopd/MiniDexed) (8 x DX7 FM tone generators, bare metal, no OS) rebuilt around the **ZicPixel**: a Pi Zero 2 W, a 320x170 colour screen, four encoders and twelve keys. No mouse, no menu diving. Every knob has a label right under it, and the whole screen takes the colour of the voice you are editing.
 
-## Status
+![ZicDexed screens, rendered by the firmware's own UI code](docs/screens/emulator_contact_sheet.png)
 
-The full UI runs on the hardware: the screen framework (lanes, key band, per-TG colour, Shift key map), all 12 keys and 4 encoders with acceleration, the VOICE, FM, OPS (with envelopes), MOD (LFO, pitch EG, FX), MIX, BROWSE and KEYS pages, PLAY and COMPARE, INIT, MUTATE, OP MUTE, SAVE VOICE and SAVE PERFORMANCE, and WiFi with FTP updates. The stock menu is under Shift+key 12. The design is in [docs/ui-design.md](docs/ui-design.md), how it is built is in [docs/firmware-ui.md](docs/firmware-ui.md).
+## Why you'll like it
 
-![simulated screens](docs/screens/simulated_contact_sheet.png)
+- **Four lanes, four knobs.** The top of the screen is one lane per encoder, with a big value and a bar. Turn a knob and its lane lights up.
+- **Eight tone generators, eight colours.** Lime, orange, sky, pink, yellow, violet, mint, red. You always know which one you are on.
+- **Sound-design keys that are fun to abuse.** MUTATE nudges a voice at random, INIT gives a clean start, COMPARE (hold) shows you what you started with, REVERT takes you back. Hold PLAY to hear a note with nothing plugged in.
+- **Macros for nasty sounds.** Bright, Snarl, Bite, Tail and Vel move several DX7 parameters at once, and the result still saves as a normal voice.
+- **Browse by ear.** Every step through the voice list previews on the spot. Leave without LOAD and your old voice comes back.
+- **Safe saves.** SAVE VOICE has a naming screen, writes through a temporary file and keeps a `.bak`. SAVE PERFORMANCE refuses to save while an operator is muted.
+- **WiFi updates.** Push firmware, config and banks over FTP. WiFi MIDI too (AppleMIDI), since Circle has no Bluetooth.
+- **Ships with 32 nasty DnB/electro voices** (bank 90): REESE BS, WOBBLE BS, NEURO STB, FM KICK, METAL SNR, HOOVER and friends.
 
-*Rendered on a PC by the same `src/ui` code the kernel runs (`make -C tests/ui shots`).*
+## The box
 
-## Layout
+Keys are numbered 1 to 12, top left to bottom right. Hold **9 (Shift)** and the screen turns into a live map of what the other keys do.
+
+![key map](docs/screens/keymap.png)
+
+| Key | Does | With Shift |
+|---|---|---|
+| 1 | VOICE (press again: more sub-pages) | INIT |
+| 2 | FM macros and algorithm | MUTATE |
+| 3 | OPS, then envelopes | OP MUTE |
+| 4 | MOD: LFO, pitch EG, FX | FX |
+| 5 / 6 | previous / next TG | TG MUTE / TG SOLO |
+| 7 | BROWSE | SAVE VOICE |
+| 8 | MIX | SAVE PERFORMANCE |
+| 9 | Shift | |
+| 10 | PLAY (hold) | KEYS: keys 1-8 become scale pads |
+| 11 | COMPARE (hold) | REVERT |
+| 12 | EXIT (hold = panic) | stock MiniDexed menu |
+
+Encoders speed up when you spin them. Hold Shift while turning for single steps.
+
+## A look around
+
+| | |
+|---|---|
+| ![voice](docs/screens/emu_voice.png) **VOICE**: name, bank, scope, per-TG settings | ![operators](docs/screens/emu_ops.png) **OPS**: six operator cards, carriers marked OUT |
+| ![browse](docs/screens/emu_browse.png) **BROWSE**: scroll to preview, key 11 loads | ![mix](docs/screens/emu_mix.png) **MIX**: eight strips, mute and solo |
+
+![sound pages](docs/screens/sound_pages.png)
+
+The screens above are not mock-ups: they are rendered on a PC by the same `src/ui` code the kernel runs (`make -C tests/ui shots`). The design notes are in [docs/ui-design.md](docs/ui-design.md), and how it is built is in [docs/firmware-ui.md](docs/firmware-ui.md).
+
+## Hardware
+
+Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS, SPI mode 3), PCM5102 I2S DAC, 4 encoders without push (26/13, 6/5, 0/9, 27/4), 12 keys on GPIO 20 16 25 14 / 12 1 24 15 / 7 8 23 22 (active low). MIDI comes in over USB: a USB host keyboard, `USBGadget=1` to play from a PC, or AppleMIDI over WiFi. There is no DIN/serial MIDI on this build.
+
+## Quick start
+
+1. Format an SD card as FAT32 and copy a MiniDexed release onto it.
+2. Build with `./build.sh` (see [Building](#building)), then copy `kernel8.img` and `minidexed.ini` from `out/` to the card root.
+3. Merge `out/sysex/voice/` into the card's `sysex/voice/` and copy the empty `performance` folder. Details in [SD card](#sd-card).
+4. Power up. You land on VOICE for TG 1. Hold key 10 to hear it.
+
+## Repo layout
 
 | Path | What |
 |---|---|

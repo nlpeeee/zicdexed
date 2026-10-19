@@ -13,7 +13,7 @@ const KeyDef kKeyMap[kKeyDefCount] = {
 	{ 'f', "MIX",     "SAVE PRF", SA_SAVE_PERF },
 	{ 'z', "SHIFT",   "SHIFT",    SA_NONE },
 	{ 'x', "PLAY",    "KEYS",     SA_KEYS },
-	{ 'c', "COMPARE", "REVERT",   SA_REVERT },
+	{ 'c', "COMPARE", "UNDO",     SA_REVERT },
 	{ 'v', "EXIT",    "MENU",     SA_MENU },
 };
 

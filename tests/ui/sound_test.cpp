@@ -30,6 +30,20 @@ static void flushAll(Gfx& g) { Rect r; static uint16_t buf[W * H]; while (g.take
 
 int main()
 {
+	{	// every page carries "TG n" in the top right of its picture
+		Rig r;
+		const Slot pages[] = { SLOT_VOICE, SLOT_FM, SLOT_OPS, SLOT_MOD, SLOT_BROWSE, SLOT_MIX };
+		for (int tg = 0; tg < 2; tg++) {
+			r.ui.setTG(tg);
+			for (Slot s : pages) {
+				r.ui.gotoSlot(s);
+				int hits = 0;
+				for (int y = kPicTop; y < kPicTop + 14; y++)
+					for (int x = W - 46; x < W; x++) if (r.g.pixel(x, y) != BG) hits++;
+				CHECK(hits > 8);
+			}
+		}
+	}
 	{	// FM page: algorithm and feedback lanes edit the live voice
 		Rig r;
 		r.press(K_W);
@@ -134,6 +148,49 @@ int main()
 		r.shiftPress(K_C);                           // revert
 		CHECK(r.live().op(0, zd::OP_OL) != edited.op(0, zd::OP_OL));
 	}
+	{	// Shift+key 11: undo the last INIT / MUTATE first, then REVERT; the dirty state follows
+		Rig r;
+		r.press(K_W);
+		Ctx c = r.ui.ctx();
+		zd::Voice orig = r.live();
+		CHECK(!SoundDesignDirty(c));
+		r.turn(1, 2);                                // a hand edit
+		zd::Voice tweaked = r.live();
+		CHECK(SoundDesignDirty(c));
+		r.shiftPress(K_Q);                           // INIT
+		CHECK(r.live() == zd::Voice::Init());
+		r.shiftPress(K_C);                           // undo the INIT: the tweaked voice is back
+		CHECK(r.live() == tweaked && SoundDesignDirty(c));
+		r.shiftPress(K_C);                           // nothing left to undo: revert
+		CHECK(r.live() == orig && !SoundDesignDirty(c));
+		r.shiftPress(K_C);                           // clean: nothing to do
+		CHECK(r.live() == orig);
+		for (int i = 0; i < 10 && r.live() == orig; i++) r.shiftPress(K_W);
+		zd::Voice m1 = r.live();
+		r.shiftPress(K_W);
+		r.shiftPress(K_C);                           // undo only the last mutate
+		CHECK(r.live() == m1);
+		r.shiftPress(K_C);
+		CHECK(r.live() == orig);
+	}
+	{	// COMPARE and REVERT use the voice that was saved, not the bank slot's voice
+		Rig r;
+		r.press(K_E);
+		r.turn(1, -10);
+		r.shiftPress(K_D);
+		r.press(K_E);                                // key 3: save the edit voice
+		CHECK(r.syn.userSaves >= 1);
+		zd::Voice saved = r.live();
+		Ctx c = r.ui.ctx();
+		CHECK(!SoundDesignDirty(c));                 // saved: not dirty any more
+		r.turn(1, -10);
+		CHECK(SoundDesignDirty(c));
+		r.down(K_C);
+		CHECK(r.live() == saved);                    // hears what was saved
+		r.up(K_C);
+		r.shiftPress(K_C);                           // revert goes back to it too
+		CHECK(r.live() == saved && !SoundDesignDirty(c));
+	}
 	{	// BROWSE: preview on turn, v cancels, c loads
 		Rig r;
 		zd::Voice orig = r.live();
@@ -152,6 +209,22 @@ int main()
 		CHECK(r.ui.slot() == SLOT_VOICE);
 		CHECK(r.syn.get(P_PROGRAM, 0) == (prog + 4) % 32);
 		CHECK(r.live() == previewed);
+		// LOAD over unsaved edits asks first, then drops them
+		r.press(K_W);
+		r.turn(2, 10);                               // edit the voice
+		r.press(K_D);
+		r.turn(0, 2);
+		prog = r.syn.get(P_PROGRAM, 0);
+		r.press(K_C);
+		CHECK(r.ui.slot() == SLOT_BROWSE && r.syn.get(P_PROGRAM, 0) == prog);
+		r.press(K_C);
+		CHECK(r.ui.slot() == SLOT_VOICE && r.syn.get(P_PROGRAM, 0) == (prog + 2) % 32);
+		// LOAD with nothing previewed changes nothing and stays put
+		r.press(K_D);
+		prog = r.syn.get(P_PROGRAM, 0);
+		r.press(K_C);
+		CHECK(r.ui.slot() == SLOT_BROWSE && r.syn.get(P_PROGRAM, 0) == prog);
+		r.press(K_V);
 		// bank lane skips bank 2, which does not exist
 		r.press(K_D);
 		r.turn(1, 1);
@@ -178,17 +251,131 @@ int main()
 		r.turn(2, 10);                               // a Bright macro edit
 		r.shiftPress(K_E);                           // op 1 muted: sounds silent but must not be saved silent
 		zd::Voice live = r.live();
-		r.syn.saveResult = 6;
-		r.shiftPress(K_D);
-		CHECK(r.syn.voiceSaves == 1);
-		zd::Voice saved; memcpy(saved.d, r.syn.lastSaved, kVoiceSize);
+		r.shiftPress(K_D);                           // opens the naming screen, saves nothing yet
+		CHECK(r.ui.slot() == SLOT_SAVE && r.syn.userSaves == 0);
+		r.press(K_E);                                // key 3: save to the next free slot
+		CHECK(r.syn.userSaves == 1 && r.syn.lastUserSlot == 0);
+		CHECK(r.ui.slot() == SLOT_FM);               // back where we came from
+		zd::Voice saved; memcpy(saved.d, r.syn.userVoice[0], kVoiceSize);
 		CHECK(saved.op(0, zd::OP_OL) > 0 && live.op(0, zd::OP_OL) == 0);
 		CHECK(saved.op(1, zd::OP_OL) == live.op(1, zd::OP_OL));
-		r.syn.saveResult = -2;
+		r.syn.userStatus = -3;                       // unreadable user bank: RESET screen instead of a dead end
 		r.shiftPress(K_D);
-		CHECK(r.syn.voiceSaves == 2);
+		CHECK(r.ui.slot() == SLOT_SAVE);
+		r.press(K_E);                                // key 3 once only arms it
+		CHECK(r.syn.resets == 0 && r.ui.slot() == SLOT_SAVE);
+		r.press(K_W);                                // any other key disarms
+		r.press(K_E);
+		CHECK(r.syn.resets == 0);
+		r.press(K_E);                                // key 3 twice resets, then the naming screen opens
+		CHECK(r.syn.resets == 1 && r.ui.slot() == SLOT_SAVE && r.syn.userStatus == 1);
+		r.press(K_R);                                // key 4 cancels
+		CHECK(r.ui.slot() == SLOT_FM);
+		r.syn.userStatus = -3; r.syn.resetResult = -3;
+		r.shiftPress(K_D); r.press(K_E); r.press(K_E);
+		CHECK(r.syn.resets == 2 && r.syn.userStatus == -3 && r.ui.slot() == SLOT_SAVE);   // failed reset: stays on the RESET screen
+		r.press(K_V);                                // key 12 leaves
+		CHECK(r.ui.slot() != SLOT_SAVE);
+		r.syn.userStatus = 1; r.syn.resetResult = 2;
+		r.shiftPress(K_F);                           // op 1 is still muted: the performance is not saved
+		CHECK(r.syn.perfSaves == 0);
+		r.shiftPress(K_E);                           // unmute
 		r.shiftPress(K_F);
 		CHECK(r.syn.perfSaves == 1);
+	}
+	{	// SAVE VOICE: name with the encoders, pick a slot, overwrite by choice
+		Rig r;
+		r.shiftPress(K_D);
+		CHECK(r.ui.slot() == SLOT_SAVE);
+		r.turn(0, 1);                                // first character: B -> C
+		r.press(K_W);                                // key 2: cursor right
+		r.turn(0, 2);                                // second character: '0' -> '2'
+		r.press(K_E);
+		zd::Voice a; memcpy(a.d, r.syn.userVoice[0], kVoiceSize);
+		char nm[11]; a.name(nm);
+		CHECK(r.syn.userSaves == 1 && r.syn.lastUserSlot == 0);
+		CHECK(nm[0] == 'C' && nm[1] == '2');
+		r.shiftPress(K_D);                           // the edit voice carries the new name now, so it targets slot 1
+		r.press(K_E);
+		CHECK(r.syn.userSaves == 2 && r.syn.lastUserSlot == 0);          // same name: overwrite, no second slot
+		r.shiftPress(K_D);
+		r.press(K_W); r.press(K_W); r.turn(0, 1);    // different name
+		r.press(K_E);
+		CHECK(r.syn.lastUserSlot == 1);
+		r.shiftPress(K_D);
+		r.turn(2, -1);                               // encoder 3: this name follows slot 2; pick slot 1 instead
+		r.press(K_E);
+		CHECK(r.syn.lastUserSlot == 0);              // slot 1 is index 0
+		r.shiftPress(K_D);
+		CHECK(r.ui.slot() == SLOT_SAVE);
+		int before = r.syn.userSaves;
+		r.press(K_R);                                // key 4 cancels
+		CHECK(r.syn.userSaves == before && r.ui.slot() != SLOT_SAVE);
+		r.shiftPress(K_D);
+		r.press(K_V);                                // key 12 leaves too
+		CHECK(r.ui.slot() != SLOT_SAVE && r.syn.userSaves == before);
+		r.syn.saveResult = -2;
+		r.shiftPress(K_D); r.press(K_E);
+		CHECK(r.ui.slot() == SLOT_SAVE && r.syn.userSaves == before);   // refused: stays on the screen
+		r.syn.saveResult = 0;
+		r.syn.userStatus = 0;                        // a build that cannot save
+		r.press(K_V); r.shiftPress(K_D);
+		CHECK(r.ui.slot() != SLOT_SAVE);
+	}
+	{	// BROWSE key 3: RENAME in the user bank (overwrites that slot), SAVE AS from other banks
+		Rig r;
+		zd::Voice u = zd::Voice::Init(); u.setName("MY SOUND"); u.set(zd::G_ALG, 7);
+		memcpy(r.syn.userVoice[2], u.d, kVoiceSize); r.syn.userUsed[2] = true;
+		r.press(K_D);
+		r.turn(1, 1); r.turn(1, 1); r.turn(1, 1);        // bank 1 -> 2 (nasty) -> 4 (skips 3) -> 99
+		CHECK(SoundHub::get().browse().bank() == 98);
+		r.turn(0, 2);                                    // voice 3 (index 2)
+		CHECK(SoundHub::get().browse().index() == 2);
+		r.press(K_E);
+		CHECK(r.ui.slot() == SLOT_SAVE && r.syn.get(P_BANK, 0) == 98 && r.syn.get(P_PROGRAM, 0) == 2);
+		r.press(K_W); r.turn(0, 1);                      // second character: next one up
+		r.press(K_E);
+		CHECK(r.syn.lastUserSlot == 2 && r.syn.userSaves == 1);   // same slot, new name
+		CHECK(r.ui.slot() == SLOT_BROWSE);
+		// from a stock bank: saves a copy into the first free slot
+		r.turn(1, -1);
+		int b = SoundHub::get().browse().bank();
+		CHECK(b != 98);
+		r.press(K_E);
+		CHECK(r.ui.slot() == SLOT_SAVE);
+		r.press(K_E);
+		CHECK(r.syn.lastUserSlot == 0 && r.syn.userSaves == 2);
+	}
+	{	// BROWSE key 2: performances instead of voices; key 11 loads the selected one
+		Rig r;
+		r.press(K_D);
+		r.press(K_W);
+		CHECK(r.ui.slot() == SLOT_BROWSE);           // key 2 did not jump to FM
+		r.turn(0, 1);                                // current is id 0, so this is id 1
+		r.turn(0, 1);                                // ids 2 does not exist: id 3
+		r.turn(0, 100);                              // clamps at the last one (id 7)
+		r.turn(0, -1);                               // back to id 4
+		r.turn(1, 5);                                // other encoders do nothing here
+		CHECK(r.syn.perfLoads == 0 && r.syn.loads == 0);
+		r.press(K_E);                                // key 3 has nothing to do in this list
+		CHECK(r.ui.slot() == SLOT_BROWSE);
+		r.press(K_V);                                // keys 12 is exit as always (nothing loaded)
+		CHECK(r.syn.perfLoads == 0);
+		r.press(K_D); r.press(K_W);
+		r.turn(0, 2);                                // id 3
+		r.press(K_W);                                // key 2 again: back to voices
+		CHECK(r.ui.slot() == SLOT_BROWSE);
+		r.turn(0, 1);                                // previews a voice again
+		CHECK(r.syn.loads == 1);
+		r.press(K_W);                                // and into performances once more: the preview is undone
+		CHECK(r.syn.loads == 2);
+		r.turn(0, 1);
+		r.press(K_C);                                // key 11
+		CHECK(r.syn.perfLoads == 1 && r.syn.lastPerfLoaded == 1);
+		CHECK(r.ui.slot() == SLOT_VOICE);
+		r.press(K_D); r.press(K_W);                  // the list starts on the performance now loaded
+		r.press(K_C);
+		CHECK(r.syn.lastPerfLoaded == 1);
 	}
 	{	// Shift+r with the Shift map showing (held past 250 ms), from several starting pages
 		for (int start = 0; start < 4; start++) {

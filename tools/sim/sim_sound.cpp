@@ -95,5 +95,46 @@ int main(int argc, char** argv)
 	s.press(K_W); s.shiftPress(K_W);                // MUTATE
 	s.run(300);
 	dump(s.g, dir, "11_mutated");
+
+	// SAVE VOICE: the naming screen, one voice already in slot 1 under the same name
+	s.press(K_V);
+	s.shiftPress(K_D);
+	s.turn(0, 4); s.press(K_W); s.press(K_W); s.turn(0, 1);
+	s.run(2000);
+	dump(s.g, dir, "12_save_new");
+	s.press(K_E);
+	s.shiftPress(K_D);
+	s.run(100);
+	dump(s.g, dir, "13_save_overwrite");
+
+	// RENAME: the VOICE page's last sub-page
+	s.press(K_V);
+	s.press(K_Q); s.press(K_Q); s.press(K_Q);
+	s.run(2000);
+	dump(s.g, dir, "14_rename");
+
+	// BROWSE on the user bank: key 3 reads RENAME
+	s.press(K_V);
+	s.press(K_D);
+	s.turn(1, 3);
+	s.run(2000);
+	dump(s.g, dir, "15_browse_user");
+
+	// BROWSE key 2: performances
+	s.press(K_V);
+	s.press(K_D); s.press(K_W);
+	s.turn(0, 2);
+	s.run(2000);
+	dump(s.g, dir, "16_browse_perfs");
+
+	// SAVE VOICE with an unreadable user bank file: the RESET screen, then armed
+	s.press(K_V);
+	s.syn.userStatus = -3;
+	s.shiftPress(K_D);
+	s.run(500);
+	dump(s.g, dir, "17_save_reset");
+	s.press(K_E);
+	s.run(200);
+	dump(s.g, dir, "18_save_reset_armed");
 	return 0;
 }

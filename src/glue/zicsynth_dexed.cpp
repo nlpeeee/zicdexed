@@ -5,6 +5,7 @@
 #include "zicglue.h"
 #include "zicmeter.h"
 #include "zicsave.h"
+#include "voice_pack.h"
 #include "minidexed.h"
 #include <string.h>
 
@@ -49,6 +50,15 @@ public:
 			m_pMini->SetVoiceParameter (kTransposeOffset, (uint8_t) (v + 24), CMiniDexed::NoOP, tg);
 		else
 			m_pMini->SetTGParameter (Map (p), v, tg);
+		if (p == P_BANK || p == P_PROGRAM)
+		{
+			// MiniDexed just loaded this program from its boot-time banks; for the
+			// user bank that is stale after a save, so load the saved voice instead.
+			unsigned bank = m_pMini->GetTGParameter (CMiniDexed::TGParameterVoiceBank, tg);
+			unsigned prog = m_pMini->GetTGParameter (CMiniDexed::TGParameterProgram, tg);
+			uint8_t buf[kVoiceSize];
+			if (UserCopy ((int) bank) && readVoiceIn ((int) bank, (int) prog, buf)) loadVoice (tg, buf);
+		}
 	}
 
 	int getFx (FxParam p) override { return m_pMini->GetParameter (MapFx (p)); }
@@ -63,6 +73,7 @@ public:
 	void bankName (int bank, char out[32]) override
 	{
 		std::string s = m_pMini->GetSysExFileLoader ()->GetBankName (bank);
+		if (s.empty () && UserCopy (bank)) s = "ZICUSER";
 		unsigned n = 0;
 		for (; n < s.size () && n < 31; n++) out[n] = s[n];
 		out[n] = 0;
@@ -109,11 +120,27 @@ public:
 
 	void revert (int tg) override { LoadStored (tg); }
 
-	int bankCount () override { return (int) m_pMini->GetSysExFileLoader ()->GetNumHighestBank () + 1; }
-	bool bankValid (int bank) override { return m_pMini->GetSysExFileLoader ()->IsValidBank (bank); }
+	// MiniDexed reads its bank files once at boot. The user bank (file 99, index 98)
+	// is served from the copy zicsave keeps after a save, so a saved voice shows up
+	// in BROWSE straight away. (Program changes over MIDI still see the boot copy.)
+	static constexpr int kUserBank = 98;
+	static const uint8_t *UserCopy (int bank) { return bank == kUserBank ? UserBankFile () : nullptr; }
+
+	int bankCount () override
+	{
+		int n = (int) m_pMini->GetSysExFileLoader ()->GetNumHighestBank () + 1;
+		return UserBankFile () && n < kUserBank + 1 ? kUserBank + 1 : n;
+	}
+	bool bankValid (int bank) override { return UserCopy (bank) || m_pMini->GetSysExFileLoader ()->IsValidBank (bank); }
 
 	bool voiceNameIn (int bank, int index, char out[kNameLen + 1]) override
 	{
+		if (const uint8_t *u = UserCopy (bank))
+		{
+			if (index < 0 || index >= zd::kBankSlots) return false;
+			zd::SlotName (u, index, out);
+			return true;
+		}
 		if (!bankValid (bank)) return false;
 		std::string s = m_pMini->GetSysExFileLoader ()->GetVoiceName (bank, index);
 		CopyName (out, s);
@@ -122,6 +149,14 @@ public:
 
 	bool readVoiceIn (int bank, int index, uint8_t v[kVoiceSize]) override
 	{
+		if (const uint8_t *u = UserCopy (bank))
+		{
+			if (index < 0 || index >= zd::kBankSlots) return false;
+			zd::Voice voice;
+			zd::UnpackVoice (u + 6 + index * zd::kPackedVoice, voice);
+			memcpy (v, voice.d, kVoiceSize);
+			return true;
+		}
 		if (!bankValid (bank)) return false;
 		uint8_t buf[156];
 		m_pMini->GetSysExFileLoader ()->GetVoice (bank, index, buf);
@@ -129,8 +164,26 @@ public:
 		return true;
 	}
 
+	int performanceLast () override { return (int) m_pMini->GetLastPerformance (); }
+	bool performanceValid (int id) override { return id >= 0 && m_pMini->IsValidPerformance ((unsigned) id); }
+	void performanceName (int id, char out[32]) override
+	{
+		std::string s = m_pMini->GetPerformanceName ((unsigned) id);
+		unsigned n = 0;
+		for (; n < s.size () && n < 31; n++) out[n] = (s[n] >= 32 && s[n] < 127) ? s[n] : ' ';
+		out[n] = 0;
+	}
+	int performanceCurrent () override { return (int) m_pMini->GetActualPerformanceID (); }
+	bool loadPerformance (int id) override { return m_pMini->SetNewPerformance ((unsigned) id); }
+
 	bool savePerformance () override { return m_pMini->SavePerformance (false); }
 	int saveVoice (const uint8_t v[kVoiceSize]) override { return SaveVoiceToUserBank (v); }
+	int saveVoiceTo (const uint8_t v[kVoiceSize], int slot) override { return SaveVoiceToUserSlot (v, slot); }
+	int resetUserBank () override { return ResetUserBank (); }
+	int userBankNames (char names[32][kNameLen + 1]) override { return ReadUserBankNames (names) ? 1 : -3; }
+
+	int masterVolume () override { return m_pMini->GetMasterVolume127 (); }
+	void setMasterVolume (int v) override { m_pMini->setMasterVolume ((float) (v < 0 ? 0 : (v > 127 ? 127 : v)) / 127.0f); }
 
 	void setMute (int tg, bool muted) override { m_pMini->SetExpression (muted ? 0 : 127, tg); }
 

@@ -15,8 +15,8 @@ namespace zic {
 
 // Palette. One hot colour per tone generator; the whole screen takes the
 // current TG's colour.
-constexpr Color BG = 0x060608, PANEL = 0x16171B, LINE = 0x282A30, GREY = 0x787A82,
-                DIM = 0x3E4046, WHITE = 0xEEEEF0, INK = 0x060608;
+constexpr Color BG = 0x060608, PANEL = 0x16171B, LINE = 0x3C3E46, GREY = 0xE4E6EC,
+                DIM = 0xB0B2BA, WHITE = 0xFFFFFF, INK = 0x060608;
 extern const Color kTGColor[kMaxTG];
 
 class Ui {
@@ -53,9 +53,13 @@ public:
 	float meter(int tg) const { return meter_[tg]; }
 	bool playing(int tg) const { return meter_[tg] > 0.02f; }
 	void toast(const char* text, uint32_t ms = 1400);
+	// Something went wrong: stays on screen until the next key press.
+	void toastError(const char* text);
+	bool toastShown() const { return toastOn_; }
 
 	Ctx ctx() { return Ctx{g_, syn_, *this, tg_, accent(), shift_, now_}; }
 	Slot slot() const { return slot_; }
+	Slot prevSlot() const { return prev_; }   // the page we came from
 	int sub() const { return sub_[slot_]; }
 	void gotoSlot(Slot s);
 	void gotoSub(Slot s, int sub);       // jump straight to a sub-page
@@ -69,18 +73,20 @@ private:
 	void drawLane(int i);
 	void drawLanes();
 	void drawFooter();
+	void drawTGTag();
 	void drawMap();
 	void refreshLanes(bool force);
 	void normalKey(int key);
 	void shiftKey(int key);
 	void applyMutes();
+	void reassertMutes();
 	void showToast();
 	void clearToast();
 
 	Gfx& g_;
 	ISynth& syn_;
 	Page* pages_[kSlotCount];
-	Slot slot_;
+	Slot slot_, prev_;
 	int sub_[kSlotCount];
 	int tg_;
 	uint32_t now_;
@@ -97,11 +103,14 @@ private:
 	char toast_[32];
 	uint32_t toastUntil_;
 	bool toastOn_;
+	bool toastKeep_;
+	uint32_t lastMuteMs_;
 
 	bool muted_[kMaxTG], solo_[kMaxTG];
 	float level_[kMaxTG], meter_[kMaxTG];
 
 	bool playing_, comparing_;
+	bool dirty_ = false;               // the dirty dot in the top right corner is showing
 	int playTG_, playNote_, compareTG_;
 	uint32_t vDownMs_;
 	bool vDown_, vFired_;
