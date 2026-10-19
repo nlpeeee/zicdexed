@@ -1,0 +1,69 @@
+diff --git a/src/config.cpp b/src/config.cpp
+index 69a3801..6ba249c 100644
+--- a/src/config.cpp
++++ b/src/config.cpp
+@@ -128,6 +128,7 @@ void CConfig::Load (void)
+ 
+ 	m_bMIDIRXProgramChange = m_Properties.GetNumber ("MIDIRXProgramChange", 1) != 0;
+ 	m_bIgnoreAllNotesOff = m_Properties.GetNumber ("IgnoreAllNotesOff", 0) != 0;
++	m_bMIDIRXMixerCC = m_Properties.GetNumber ("MIDIRXMixerCC", 1) != 0;
+ 	m_bMIDIAutoVoiceDumpOnPC = m_Properties.GetNumber ("MIDIAutoVoiceDumpOnPC", 0) != 0;
+ 	m_bHeaderlessSysExVoices = m_Properties.GetNumber ("HeaderlessSysExVoices", 0) != 0;
+ 	m_bExpandPCAcrossBanks = m_Properties.GetNumber ("ExpandPCAcrossBanks", 1) != 0;
+@@ -402,6 +403,11 @@ bool CConfig::GetMIDIRXProgramChange (void) const
+ 	return m_bMIDIRXProgramChange;
+ }
+ 
++bool CConfig::GetMIDIRXMixerCC (void) const
++{
++	return m_bMIDIRXMixerCC;
++}
++
+ bool CConfig::GetIgnoreAllNotesOff (void) const
+ {
+ 	return m_bIgnoreAllNotesOff;
+diff --git a/src/config.h b/src/config.h
+index 76b8912..83456ea 100644
+--- a/src/config.h
++++ b/src/config.h
+@@ -130,6 +130,7 @@ public:
+ 	bool GetMIDIThruIgnoreActiveSensing (void) const;		// false if not specified
+ 	bool GetMIDIRXProgramChange (void) const;	// true if not specified
+ 	bool GetIgnoreAllNotesOff (void) const;
++	bool GetMIDIRXMixerCC (void) const;		// false: ignore CC 7/10/11 (volume, pan, expression)
+ 	bool GetMIDIAutoVoiceDumpOnPC (void) const; // false if not specified
+ 	bool GetHeaderlessSysExVoices (void) const; // false if not specified
+ 	bool GetExpandPCAcrossBanks (void) const; // true if not specified
+@@ -294,6 +295,7 @@ private:
+ 	bool m_bMIDIThruIgnoreActiveSensing;
+ 	bool m_bMIDIRXProgramChange;
+ 	bool m_bIgnoreAllNotesOff;
++	bool m_bMIDIRXMixerCC;
+ 	bool m_bMIDIAutoVoiceDumpOnPC;
+ 	bool m_bHeaderlessSysExVoices;
+ 	bool m_bExpandPCAcrossBanks;
+diff --git a/src/mididevice.cpp b/src/mididevice.cpp
+index d93b115..ebd20ea 100644
+--- a/src/mididevice.cpp
++++ b/src/mididevice.cpp
+@@ -554,15 +554,17 @@ void CMIDIDevice::MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsign
+ 							break;
+ 								
+ 						case MIDI_CC_VOLUME:
+-							m_pSynthesizer->SetVolume (pMessage[2], nTG);
++							if (m_pConfig->GetMIDIRXMixerCC ())
++								m_pSynthesizer->SetVolume (pMessage[2], nTG);
+ 							break;
+ 		
+ 						case MIDI_CC_PAN_POSITION:
+-							m_pSynthesizer->SetPan (pMessage[2], nTG);
++							if (m_pConfig->GetMIDIRXMixerCC ())
++								m_pSynthesizer->SetPan (pMessage[2], nTG);
+ 							break;
+ 		
+ 						case MIDI_CC_EXPRESSION:
+-							if (m_nMIDIGlobalExpression == Disabled) {
++							if (m_pConfig->GetMIDIRXMixerCC () && m_nMIDIGlobalExpression == Disabled) {
+ 								// Expression is per channel only
+ 								m_pSynthesizer->SetExpression (pMessage[2], nTG);
+ 							}

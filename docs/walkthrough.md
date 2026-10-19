@@ -251,6 +251,7 @@ Shift + an encoder = fine steps; on ENV and PITCH EG it switches rates to levels
 
 ## 8. Things that catch people out
 
+- **A MIDI track resets the voices.** Players and sequencers send Program Change (often 0 on every channel) at the start, stop or end of a track, and MiniDexed reloads the voice on every TG on that channel. The shipped `minidexed.ini` has `MIDIRXProgramChange=0`, so MIDI no longer changes voices. Set it to 1 if you want a track to choose them. The same reset also sends volume, pan and expression (CC 7, 10, 11), which jumped the levels up at the end; `MIDIRXMixerCC=0` ignores those too (set 1 to let a track mix the TGs). Needs the new kernel build.
 - **Switching voice drops edits.** Program changes (the Program lane, MIDI) and loading a performance replace the TG's voice without asking. BROWSE LOAD asks once. Look for the amber dot, and save first (Shift + 7), or use COMPARE and UNDO to see what you would lose.
 - **Check the slot on the SAVE screen.** A name that already exists in ZICUSER targets its own slot, and key 3 then overwrites it. Pick NEW with encoder 3 to keep both.
 - **Shift + 8 refuses while an operator is muted.** Un-mute it (Shift + 3) first.
