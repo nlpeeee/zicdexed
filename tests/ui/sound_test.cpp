@@ -190,6 +190,18 @@ int main()
 		r.shiftPress(K_F);
 		CHECK(r.syn.perfSaves == 1);
 	}
+	{	// Shift+r with the Shift map showing (held past 250 ms), from several starting pages
+		for (int start = 0; start < 4; start++) {
+			Rig r;
+			if (start == 1) r.press(K_R);
+			if (start == 2) { r.press(K_R); r.press(K_R); }
+			if (start == 3) r.press(K_W);
+			r.ui.key(K_Z, true, r.ms); r.run(500);
+			r.down(K_R); r.up(K_R);
+			r.ui.key(K_Z, false, r.ms); r.run(100);
+			CHECK(r.ui.slot() == SLOT_MOD && r.ui.sub() == 2);
+		}
+	}
 	{	// KEYS: pads play the current TG through the scale, held notes release on exit
 		Rig r;
 		r.ui.key(K_Z, true, r.ms); r.run(20); r.press(K_X); r.ui.key(K_Z, false, r.ms); r.run(20);

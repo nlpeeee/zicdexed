@@ -76,7 +76,7 @@ index 2e9c423..76b8912 100644
  	unsigned m_nEncoderPinData;
  	unsigned m_nEncoderDetents;
 diff --git a/src/minidexed.cpp b/src/minidexed.cpp
-index 4ec0ad0..8aa7704 100644
+index 4ec0ad0..dbbf89c 100644
 --- a/src/minidexed.cpp
 +++ b/src/minidexed.cpp
 @@ -18,6 +18,7 @@
@@ -104,7 +104,22 @@ index 4ec0ad0..8aa7704 100644
  
  			// BEGIN adding reverb
  			if (m_nParameter[ParameterReverbEnable])
-@@ -2299,6 +2301,7 @@ void CMiniDexed::UpdateNetwork()
+@@ -2268,6 +2270,14 @@ void CMiniDexed::UpdateNetwork()
+ 		bNetIsRunning &= m_pNetDevice->IsLinkUp();
+ 	else if (m_pNetDevice->GetType() == NetDeviceTypeWLAN)
+ 		bNetIsRunning &= (m_WPASupplicant && m_WPASupplicant->IsConnected());
++
++	if (!m_bNetworkInit && m_pNetDevice->GetType() == NetDeviceTypeWLAN)
++	{
++		bool bAssoc = m_WPASupplicant && m_WPASupplicant->IsConnected();
++		ZicSetNetStatus (!m_WPASupplicant ? "WiFi: no supplicant"
++				 : !bAssoc ? "WiFi: joining AP..."
++				 : "WiFi: waiting for DHCP", 0);
++	}
+ 	
+ 	if (!m_bNetworkInit && bNetIsRunning)
+ 	{
+@@ -2299,6 +2309,7 @@ void CMiniDexed::UpdateNetwork()
  		}
  
  		m_UI.DisplayWrite (IPString, "", "TG1", 0, 1);
@@ -112,7 +127,7 @@ index 4ec0ad0..8aa7704 100644
  
  		m_pmDNSPublisher = new CmDNSPublisher (m_pNet);
  		assert (m_pmDNSPublisher);
-@@ -2347,12 +2350,18 @@ void CMiniDexed::UpdateNetwork()
+@@ -2347,12 +2358,18 @@ void CMiniDexed::UpdateNetwork()
  		LOGNOTE("CMiniDexed::UpdateNetwork: Network disconnected");
  		m_bNetworkReady = false;
  		m_pmDNSPublisher->UnpublishService (m_pConfig->GetNetworkHostname());
@@ -131,6 +146,32 @@ index 4ec0ad0..8aa7704 100644
  		
  		if (!m_pmDNSPublisher->PublishService (m_pConfig->GetNetworkHostname(), CmDNSPublisher::ServiceTypeAppleMIDI,
  						     5004))
+@@ -2399,6 +2416,7 @@ bool CMiniDexed::InitNetwork()
+ 			else
+ 			{
+ 				LOGERR("CMiniDexed::InitNetwork: Failed to initialize WLAN, maybe firmware files are missing?");
++				ZicSetNetStatus ("WiFi chip failed: firmware?", 0);
+ 				delete m_WLAN; m_WLAN = nullptr;
+ 				return false;
+ 			}
+@@ -2444,6 +2462,7 @@ bool CMiniDexed::InitNetwork()
+ 			if (!m_pNet || !m_pNet->Initialize(false)) // Check if m_pNet allocation succeeded
+ 			{
+ 				LOGERR("CMiniDexed::InitNetwork: Failed to initialize network subsystem");
++				ZicSetNetStatus ("WiFi net init failed", 0);
+ 				delete m_pNet; m_pNet = nullptr; // Clean up if failed
+ 				delete m_WLAN; m_WLAN = nullptr; // Clean up WLAN if allocated
+ 				return false; // Return false as network init failed
+@@ -2455,7 +2474,8 @@ bool CMiniDexed::InitNetwork()
+ 				m_WPASupplicant = new CWPASupplicant(WLANConfigFile); // Allocate m_WPASupplicant
+ 				if (!m_WPASupplicant || !m_WPASupplicant->Initialize()) 
+ 				{
+-					LOGERR("CMiniDexed::InitNetwork: Failed to initialize WPASupplicant, maybe wlan config is missing?"); 
++					LOGERR("CMiniDexed::InitNetwork: Failed to initialize WPASupplicant, maybe wlan config is missing?");
++				ZicSetNetStatus ("WiFi: wpa_supplicant.conf?", 0); 
+ 					delete m_WPASupplicant; m_WPASupplicant = nullptr; // Clean up if failed
+ 					// Continue without supplicant? Or return false? Decided to continue for now.
+ 				}
 diff --git a/src/userinterface.cpp b/src/userinterface.cpp
 index b503b21..eae0931 100644
 --- a/src/userinterface.cpp
