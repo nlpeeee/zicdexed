@@ -1,5 +1,7 @@
 # ZicPixel MiniDexed: interface refinement plan
 
+Keys are numbered 1 to 12, left to right and top to bottom (q w e r / a s d f / z x c v on a PC keyboard).
+
 Starting point: the POC (custom `kernel8.img` from MiniDexed main `8e3fa30` plus the 170x320 row-offset patch, and `minidexed.ini`). Today it uses one encoder and 7 of the 12 keys. The screen shows the stock MiniDexed 20x4 text menu.
 
 Goal: make it feel like a ZicPixel instrument. That means all 4 encoders doing something useful, all 12 keys, and a home screen built for playing (zicBox style: four parameter columns sitting over the four encoders) instead of a menu.
@@ -10,8 +12,8 @@ Goal: make it feel like a ZicPixel instrument. That means all 4 encoders doing s
 |---|---|---|
 | Encoders | One KY-040 encoder only (`userinterface.cpp:179`) | Encoders 2-4 need a firmware patch |
 | Keys | Fixed roles: Prev, Next, Back, Select, Home, Shortcut, Pgm+/-, Bank+/-, TG+/-. Each takes click, double-click or long-press (`minidexed.ini`) | 11 roles, so the layout can be tidied with the ini alone |
-| Keys z, x (GPIO 7/8, SPI CE) | Buttons are set up after SPI and reset their pin to input with pull-up (`uibuttons.cpp:84`). The screen has no CS line, so SPI doesn't need these pins | They probably work as keys with **no code change**. Needs a test on the hardware |
-| Keys r, f (GPIO 14/15, UART) | Serial MIDI starts **after** the UI (`minidexed.cpp:279` then `:286`) and takes the pins back | Needs a small patch: an ini switch to turn serial MIDI off |
+| Keys 9, 10 (GPIO 7/8, SPI CE) | Buttons are set up after SPI and reset their pin to input with pull-up (`uibuttons.cpp:84`). The screen has no CS line, so SPI doesn't need these pins | They probably work as keys with **no code change**. Needs a test on the hardware |
+| Keys 4, 8 (GPIO 14/15, UART) | Serial MIDI starts **after** the UI (`minidexed.cpp:279` then `:286`) and takes the pins back | Needs a small patch: an ini switch to turn serial MIDI off |
 | Enc3 (GPIO 0/9) | GPIO9 is SPI MISO, which the screen doesn't use | Should work once multi-encoder support exists. Test it |
 | Screen | Text-only character grid (`CST7789Device`, Font8x16). Circle's ST7789 driver underneath can draw colour areas and text | A graphical home screen means writing our own drawing code. A full redraw takes about 60 ms at 15 MHz, so only changed areas get redrawn |
 | Sound shaping per TG | Volume, Pan, Reverb send, Detune, Cutoff, Resonance, Mono, Portamento, Pitch bend, plus full voice/operator edit. Effects: compressor and reverb | The "nasty" parameters already exist (Cutoff/Res, operator feedback, detune). There's no drive or bitcrush effect |
@@ -19,25 +21,25 @@ Goal: make it feel like a ZicPixel instrument. That means all 4 encoders doing s
 
 ## Proposed controls
 
-Keeps what you already learned in the POC (c Back, v Select, d Home, a/s Program, q/w TG).
+Keeps what you already learned in the POC (key 11 Back, key 12 Select, key 7 Home, keys 5/6 Program, keys 1/2 TG).
 
 ```
  [Enc1]      [Enc2]      [Enc3]      [Enc4]        perform screen: param 1..4 of the current page
                                                    menus: navigate | coarse value | TG | operator
 
- q TG-       w TG+       e Bank-     r Bank+
- a Prog-     s Prog+     d Home      f Audition    (hold = plays a note on the current TG, no keyboard needed)
- z Shift     x Page      c Back      v Select
+ 1 TG-       2 TG+       3 Bank-     4 Bank+
+ 5 Prog-     6 Prog+     7 Home      8 Audition    (hold = plays a note on the current TG, no keyboard needed)
+ 9 Shift     10 Page     11 Back     12 Select
 ```
 
 Shift combinations:
 - Shift+encoder: fine or coarse step
-- Shift+q/w: mute or solo the current TG
-- Shift+d: all notes off (panic)
-- Shift+v: save performance
-- Shift+x: previous page
+- Shift+1/2: mute or solo the current TG
+- Shift+7: all notes off (panic)
+- Shift+12: save performance
+- Shift+10: previous page
 
-Perform-screen pages, cycled with x. Each page is 4 knobs for the current TG:
+Perform-screen pages, cycled with key 10. Each page is 4 knobs for the current TG:
 
 | Page | Enc1 | Enc2 | Enc3 | Enc4 |
 |---|---|---|---|---|
@@ -58,13 +60,13 @@ The text menu stays available for deep editing (Select from the home screen open
 Each phase ends with something you can flash and try.
 
 **Phase 1: ini only, no rebuild** (small)
-- Move the keys to the layout above as far as stock roles allow: z gets Shortcut, x gets Next/Prev, e/r get Bank-/+.
-- Confirm z and x actually register.
+- Move the keys to the layout above as far as stock roles allow: key 9 gets Shortcut, key 10 gets Next/Prev, keys 3/4 get Bank-/+.
+- Confirm keys 9 and 10 actually register.
 - Hardware checks: whether rotation 180 is right, which physical knob is Enc1, and encoder direction and resolution.
 - Optional: turn on WiFi plus FTP so later builds can be pushed with `updater.py`. You'd put your WiFi details in `wpa_supplicant.conf` yourself.
 
 **Phase 2: hardware patch set** (small firmware change)
-- `SerialMIDIEnabled=0` ini switch, which frees r/f.
+- `SerialMIDIEnabled=0` ini switch, which frees keys 4 and 8.
 - `Encoder2/3/4PinClock/Data` ini keys, so all 4 encoders send events.
 - Audition key: note on/off for the current TG's channel.
 - Shift modifier handling.
@@ -93,14 +95,14 @@ Each phase ends with something you can flash and try.
 ## Decisions for you
 
 1. **Where the code lives:** zp repo `minidexed/` folder (recommended) or a separate MiniDexed fork.
-2. **Serial/DIN MIDI on this unit:** never used (recommended assumption, frees r/f) or keep it.
+2. **Serial/DIN MIDI on this unit:** never used (recommended assumption, frees keys 4 and 8) or keep it.
 3. **Home screen:** custom perform screen (recommended) or keep the stock text menu and only improve it.
 4. **Key layout:** the layout above as-is, or tell me what to change.
 5. **WiFi updates:** enable FTP updating (recommended, faster iteration) or keep swapping the SD card.
 
 ### Decided (2026-10-15)
 1. Code lives in its own repo, `nlpeeee/zicdexed`.
-2. MIDI is over USB only, so serial MIDI is turned off and r/f become keys. Bluetooth would be nice but is a stretch (see ui-design.md section 6).
+2. MIDI is over USB only, so serial MIDI is turned off and keys 4 and 8 become keys. Bluetooth would be nice but is a stretch (see ui-design.md section 6).
 3. Custom perform UI that makes full use of the screen and all 4 encoders. The full design is in ui-design.md, and it replaces "Proposed controls" above.
 4. Key layout redesigned around zicBox conventions in ui-design.md.
 5. WiFi/FTP updates: yes.
