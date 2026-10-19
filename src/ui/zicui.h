@@ -56,6 +56,7 @@ public:
 
 	Ctx ctx() { return Ctx{g_, syn_, *this, tg_, accent(), shift_, now_}; }
 	Slot slot() const { return slot_; }
+	Slot prevSlot() const { return prev_; }   // the page we came from
 	int sub() const { return sub_[slot_]; }
 	void gotoSlot(Slot s);
 	void gotoSub(Slot s, int sub);       // jump straight to a sub-page
@@ -80,7 +81,7 @@ private:
 	Gfx& g_;
 	ISynth& syn_;
 	Page* pages_[kSlotCount];
-	Slot slot_;
+	Slot slot_, prev_;
 	int sub_[kSlotCount];
 	int tg_;
 	uint32_t now_;

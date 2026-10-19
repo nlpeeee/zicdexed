@@ -56,5 +56,6 @@ Page* CreateOpsPage();      // e: operators, envelope
 Page* CreateModPage();      // r: LFO, pitch EG, FX
 Page* CreateBrowsePage();   // d
 Page* CreateKeysPage();     // Shift+x
+Page* CreateSavePage();     // Shift+7: name the voice and save it
 
 } // namespace zic

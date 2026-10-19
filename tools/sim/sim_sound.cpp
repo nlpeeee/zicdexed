@@ -95,5 +95,16 @@ int main(int argc, char** argv)
 	s.press(K_W); s.shiftPress(K_W);                // MUTATE
 	s.run(300);
 	dump(s.g, dir, "11_mutated");
+
+	// SAVE VOICE: the naming screen, one voice already in slot 1 under the same name
+	s.press(K_V);
+	s.shiftPress(K_D);
+	s.turn(0, 4); s.press(K_W); s.press(K_W); s.turn(0, 1);
+	s.run(2000);
+	dump(s.g, dir, "12_save_new");
+	s.press(K_E);
+	s.shiftPress(K_D);
+	s.run(100);
+	dump(s.g, dir, "13_save_overwrite");
 	return 0;
 }

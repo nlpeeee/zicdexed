@@ -1,0 +1,208 @@
+//
+// SAVE page (Shift+key 7): name the voice and choose where it goes in the user
+// bank (bank 99, 32 slots). Not on a page key; OpenSaveScreen() opens it.
+//   Encoders: 1 Char (turn the character under the cursor), 2 Cursor,
+//             3 Slot (NEW = first free slot, or 1..32 to overwrite), 4 Set (A-Z, 0-9, a-z, symbols)
+//   Keys:     1 cursor left, 2 cursor right, 3 SAVE, 4 CANCEL (key 12 also leaves)
+// The picture is the ten name cells and what the save will do.
+//
+#include "zicpages.h"
+#include "soundhub.h"
+#include "name_editor.h"
+#include <string.h>
+
+namespace zic {
+
+namespace {
+
+const Color WARN = 0xFFB020;
+zd::NameEditor g_ed;
+
+const char* const kGroupName[5] = { "SPACE", "A-Z", "0-9", "a-z", "SYMBOLS" };
+
+int groupOf(char ch)
+{
+	const char* cs = zd::NameEditor::charset();
+	int i = 0;
+	for (; i < zd::NameEditor::charsetSize(); i++) if (cs[i] == ch) break;
+	if (i >= 63) return 4;
+	if (i >= 37) return 3;
+	if (i >= 27) return 2;
+	if (i >= 1) return 1;
+	return 0;
+}
+
+class SavePage : public Page {
+public:
+	const char* name() const override { return "SAVE"; }
+
+	const char* const* keyLabels(Ctx&, int) override
+	{
+		static const char* const l[4] = { "< CURSOR", "CURSOR >", "SAVE", "CANCEL" };
+		return l;
+	}
+
+	void lane(Ctx&, int, int i, LaneView& out) override
+	{
+		out.bipolar = false;
+		const char ch = g_ed.name()[g_ed.cursor()];
+		switch (i) {
+		case 0:
+			copyStr(out.label, "Char", sizeof out.label);
+			if (ch == ' ') copyStr(out.text, "SPACE", sizeof out.text);
+			else { out.text[0] = ch; out.text[1] = 0; }
+			{
+				const char* cs = zd::NameEditor::charset();
+				int k = 0;
+				while (k < zd::NameEditor::charsetSize() && cs[k] != ch) k++;
+				out.frac = frac(k, 0, zd::NameEditor::charsetSize() - 1);
+			}
+			break;
+		case 1:
+			copyStr(out.label, "Cursor", sizeof out.label);
+			fmtInt(out.text, g_ed.cursor() + 1);
+			strcat(out.text, "/10");
+			out.frac = frac(g_ed.cursor(), 0, zd::kNameLen - 1);
+			break;
+		case 2:
+			copyStr(out.label, "Slot", sizeof out.label);
+			if (g_ed.target() < 0) copyStr(out.text, "NEW", sizeof out.text);
+			else fmtInt(out.text, g_ed.target() + 1);
+			out.frac = frac(g_ed.target() + 1, 0, zd::kBankSlots);
+			break;
+		default:
+			copyStr(out.label, "Set", sizeof out.label);
+			copyStr(out.text, kGroupName[groupOf(ch)], sizeof out.text);
+			out.frac = frac(groupOf(ch), 0, 4);
+			break;
+		}
+	}
+
+	bool turn(Ctx&, int, int i, int steps, bool) override
+	{
+		const int dir = steps > 0 ? 1 : -1;
+		switch (i) {
+		case 0: g_ed.turnChar(steps); break;
+		case 1: g_ed.moveCursor(dir); break;
+		case 2: g_ed.turnTarget(dir); break;
+		default: g_ed.jumpGroup(dir); break;
+		}
+		return true;
+	}
+
+	bool key(Ctx& c, int, int k, bool down) override
+	{
+		if (!down) return false;
+		switch (k) {
+		case K_Q: g_ed.moveCursor(-1); c.ui.redrawPicture(); return true;
+		case K_W: g_ed.moveCursor(1); c.ui.redrawPicture(); return true;
+		case K_E: save(c); return true;
+		case K_R: c.ui.toast("SAVE CANCELLED"); leave_(c); return true;
+		default: return false;
+		}
+	}
+
+	void draw(Ctx& c, int) override
+	{
+		Gfx& g = c.g;
+		const int cw = 30, x0 = 10, y0 = 50, ch = 40;
+		for (int i = 0; i < zd::kNameLen; i++) {
+			const int x = x0 + i * cw;
+			const bool cur = i == g_ed.cursor();
+			g.roundRect((float)x + 1, (float)y0, (float)cw - 2, (float)ch, 4, cur ? dim(c.accent, 70) : PANEL,
+			            cur ? c.accent : Gfx::NoColor, 1.5f);
+			const char s[2] = { g_ed.name()[i], 0 };
+			if (s[0] == ' ') g.hline(x + 9, y0 + ch - 9, cw - 18, cur ? c.accent : DIM);
+			else g.textAligned(x, y0 + 4, cw, s, fBig, WHITE, AL_CENTER);
+		}
+		g.text(10, 98, "BANK 99  USER", fLbl, GREY, 1.f);
+
+		char line[40];
+		Color col = c.accent;
+		const int slot = g_ed.slot();
+		if (!g_ed.nameOk()) {
+			copyStr(line, "GIVE IT A NAME FIRST", sizeof line);
+			col = WARN;
+		} else if (slot < 0) {
+			copyStr(line, "BANK FULL: TURN ENCODER 3 TO PICK A SLOT", sizeof line);
+			col = WARN;
+		} else if (g_ed.overwrites()) {
+			char old[zd::kNameLen + 1];
+			copyStr(old, g_ed.slotName(slot), sizeof old);
+			int n = (int)strlen(old);
+			while (n > 0 && old[n - 1] == ' ') old[--n] = 0;
+			char b[8];
+			fmtInt(b, slot + 1);
+			copyStr(line, "OVERWRITES SLOT ", sizeof line);
+			strcat(line, b);
+			strcat(line, ": ");
+			strcat(line, old);
+			col = WARN;
+		} else {
+			char b[8];
+			fmtInt(b, slot + 1);
+			copyStr(line, "NEW VOICE IN SLOT ", sizeof line);
+			strcat(line, b);
+			strcat(line, g_ed.target() < 0 ? "  (NEXT FREE)" : "");
+		}
+		g.text(10, 114, line, fBody, col);
+		g.text(10, 132, "KEY 3 SAVES, KEY 4 CANCELS", fSmall, GREY);
+	}
+
+	void save(Ctx& c)
+	{
+		if (!g_ed.nameOk()) { c.ui.toast("GIVE IT A NAME FIRST"); return; }
+		const int slot = g_ed.slot();
+		if (slot < 0) { c.ui.toast("USER BANK FULL - PICK A SLOT"); return; }
+		SoundHub& h = SoundHub::get();
+		h.bind(c);
+		zd::EditSession& s = h.session();
+		// the edit voice, not what is sounding: no op mutes in it
+		for (int i = 0; i < zd::kNameLen; i++) s.setParam(zd::G_NAME + i, (uint8_t)g_ed.name()[i], false);
+		const bool over = g_ed.overwrites();
+		const int rc = c.syn.saveVoiceTo(s.edit().d, slot);
+		h.settle(c.tg);
+		char msg[32], b[8];
+		if (rc >= 0) {
+			s.markSaved();
+			fmtInt(b, rc + 1);
+			copyStr(msg, over ? "OVERWROTE SLOT " : "SAVED IN SLOT ", sizeof msg);
+			strcat(msg, b);
+			strcat(msg, " OF BANK 99");
+			c.ui.toast(msg);
+			leave_(c);
+			return;
+		}
+		c.ui.toast(rc == -2 ? "USER BANK FULL" : (rc == -1 ? "SAVE VOICE - NOT IN THIS BUILD" : "SAVE FAILED - SD CARD"));
+	}
+
+private:
+	void leave_(Ctx& c)
+	{
+		Slot back = c.ui.prevSlot();
+		c.ui.gotoSlot(back == SLOT_SAVE ? SLOT_VOICE : back);
+	}
+};
+
+} // namespace
+
+bool OpenSaveScreen(Ctx& c)
+{
+	char names[zd::kBankSlots][zd::kNameLen + 1];
+	const int rc = c.syn.userBankNames(names);
+	if (rc <= 0) {
+		c.ui.toast(rc == 0 ? "SAVE VOICE - NOT IN THIS BUILD" : "USER BANK FILE UNREADABLE");
+		return false;
+	}
+	SoundHub& h = SoundHub::get();
+	h.bind(c);
+	char nm[zd::kNameLen + 1];
+	h.session().edit().name(nm);
+	g_ed.begin(nm, names);
+	c.ui.gotoSlot(SLOT_SAVE);
+	return true;
+}
+
+Page* CreateSavePage() { static SavePage p; return &p; }
+
+} // namespace zic

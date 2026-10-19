@@ -9,7 +9,7 @@ const Color kTGColor[kMaxTG] = {
 	0xBEFF28, 0xFF6E1E, 0x28D2FF, 0xFF3C96, 0xFFDC28, 0x966EFF, 0x3CF0AA, 0xFF4646,
 };
 
-static const char* const kSlotNames[kSlotCount] = { "VOICE", "FM", "OPS", "MOD", "BROWSE", "MIX", "KEYS" };
+static const char* const kSlotNames[kSlotCount] = { "VOICE", "FM", "OPS", "MOD", "BROWSE", "MIX", "KEYS", "SAVE" };
 // The key label of the active page names the sub-page it is on, so MOD reads FX when you are on FX.
 static const char* subLabel(Slot s, int sub, int count)
 {
@@ -37,7 +37,7 @@ static void upper(char* dst, const char* src, int n)
 }
 
 Ui::Ui(Gfx& g, ISynth& syn)
-	: g_(g), syn_(syn), slot_(SLOT_VOICE), tg_(0), now_(0),
+	: g_(g), syn_(syn), slot_(SLOT_VOICE), prev_(SLOT_VOICE), tg_(0), now_(0),
 	  shift_(false), mapShown_(false), mapHidden_(false), shiftDownMs_(0),
 	  suspended_(false), menuReq_(false),
 	  lastLaneMs_(0), lastTickMs_(0), toastUntil_(0), toastOn_(false),
@@ -109,6 +109,7 @@ void Ui::gotoSlot(Slot s)
 		else return;
 	} else {
 		if (page()) { Ctx lc = ctx(); page()->leave(lc, sub_[slot_]); }
+		prev_ = slot_;
 		slot_ = s;
 		sub_[s] = 0;
 	}

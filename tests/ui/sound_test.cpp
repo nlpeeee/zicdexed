@@ -178,17 +178,59 @@ int main()
 		r.turn(2, 10);                               // a Bright macro edit
 		r.shiftPress(K_E);                           // op 1 muted: sounds silent but must not be saved silent
 		zd::Voice live = r.live();
-		r.syn.saveResult = 6;
-		r.shiftPress(K_D);
-		CHECK(r.syn.voiceSaves == 1);
-		zd::Voice saved; memcpy(saved.d, r.syn.lastSaved, kVoiceSize);
+		r.shiftPress(K_D);                           // opens the naming screen, saves nothing yet
+		CHECK(r.ui.slot() == SLOT_SAVE && r.syn.userSaves == 0);
+		r.press(K_E);                                // key 3: save to the next free slot
+		CHECK(r.syn.userSaves == 1 && r.syn.lastUserSlot == 0);
+		CHECK(r.ui.slot() == SLOT_FM);               // back where we came from
+		zd::Voice saved; memcpy(saved.d, r.syn.userVoice[0], kVoiceSize);
 		CHECK(saved.op(0, zd::OP_OL) > 0 && live.op(0, zd::OP_OL) == 0);
 		CHECK(saved.op(1, zd::OP_OL) == live.op(1, zd::OP_OL));
-		r.syn.saveResult = -2;
+		r.syn.userStatus = -3;                       // unreadable user bank: stays put
 		r.shiftPress(K_D);
-		CHECK(r.syn.voiceSaves == 2);
+		CHECK(r.ui.slot() == SLOT_FM);
+		r.syn.userStatus = 1;
 		r.shiftPress(K_F);
 		CHECK(r.syn.perfSaves == 1);
+	}
+	{	// SAVE VOICE: name with the encoders, pick a slot, overwrite by choice
+		Rig r;
+		r.shiftPress(K_D);
+		CHECK(r.ui.slot() == SLOT_SAVE);
+		r.turn(0, 1);                                // first character: B -> C
+		r.press(K_W);                                // key 2: cursor right
+		r.turn(0, 2);                                // second character: '0' -> '2'
+		r.press(K_E);
+		zd::Voice a; memcpy(a.d, r.syn.userVoice[0], kVoiceSize);
+		char nm[11]; a.name(nm);
+		CHECK(r.syn.userSaves == 1 && r.syn.lastUserSlot == 0);
+		CHECK(nm[0] == 'C' && nm[1] == '2');
+		r.shiftPress(K_D);                           // the edit voice carries the new name now, so it targets slot 1
+		r.press(K_E);
+		CHECK(r.syn.userSaves == 2 && r.syn.lastUserSlot == 0);          // same name: overwrite, no second slot
+		r.shiftPress(K_D);
+		r.press(K_W); r.press(K_W); r.turn(0, 1);    // different name
+		r.press(K_E);
+		CHECK(r.syn.lastUserSlot == 1);
+		r.shiftPress(K_D);
+		r.turn(2, -1);                               // encoder 3: this name follows slot 2; pick slot 1 instead
+		r.press(K_E);
+		CHECK(r.syn.lastUserSlot == 0);              // slot 1 is index 0
+		r.shiftPress(K_D);
+		CHECK(r.ui.slot() == SLOT_SAVE);
+		int before = r.syn.userSaves;
+		r.press(K_R);                                // key 4 cancels
+		CHECK(r.syn.userSaves == before && r.ui.slot() != SLOT_SAVE);
+		r.shiftPress(K_D);
+		r.press(K_V);                                // key 12 leaves too
+		CHECK(r.ui.slot() != SLOT_SAVE && r.syn.userSaves == before);
+		r.syn.saveResult = -2;
+		r.shiftPress(K_D); r.press(K_E);
+		CHECK(r.ui.slot() == SLOT_SAVE && r.syn.userSaves == before);   // refused: stays on the screen
+		r.syn.saveResult = 0;
+		r.syn.userStatus = 0;                        // a build that cannot save
+		r.press(K_V); r.shiftPress(K_D);
+		CHECK(r.ui.slot() != SLOT_SAVE);
 	}
 	{	// Shift+r with the Shift map showing (held past 250 ms), from several starting pages
 		for (int start = 0; start < 4; start++) {

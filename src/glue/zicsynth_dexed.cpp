@@ -5,6 +5,7 @@
 #include "zicglue.h"
 #include "zicmeter.h"
 #include "zicsave.h"
+#include "voice_pack.h"
 #include "minidexed.h"
 #include <string.h>
 
@@ -63,6 +64,7 @@ public:
 	void bankName (int bank, char out[32]) override
 	{
 		std::string s = m_pMini->GetSysExFileLoader ()->GetBankName (bank);
+		if (s.empty () && UserCopy (bank)) s = "ZICUSER";
 		unsigned n = 0;
 		for (; n < s.size () && n < 31; n++) out[n] = s[n];
 		out[n] = 0;
@@ -109,11 +111,27 @@ public:
 
 	void revert (int tg) override { LoadStored (tg); }
 
-	int bankCount () override { return (int) m_pMini->GetSysExFileLoader ()->GetNumHighestBank () + 1; }
-	bool bankValid (int bank) override { return m_pMini->GetSysExFileLoader ()->IsValidBank (bank); }
+	// MiniDexed reads its bank files once at boot. The user bank (file 99, index 98)
+	// is served from the copy zicsave keeps after a save, so a saved voice shows up
+	// in BROWSE straight away. (Program changes over MIDI still see the boot copy.)
+	static constexpr int kUserBank = 98;
+	static const uint8_t *UserCopy (int bank) { return bank == kUserBank ? UserBankFile () : nullptr; }
+
+	int bankCount () override
+	{
+		int n = (int) m_pMini->GetSysExFileLoader ()->GetNumHighestBank () + 1;
+		return UserBankFile () && n < kUserBank + 1 ? kUserBank + 1 : n;
+	}
+	bool bankValid (int bank) override { return UserCopy (bank) || m_pMini->GetSysExFileLoader ()->IsValidBank (bank); }
 
 	bool voiceNameIn (int bank, int index, char out[kNameLen + 1]) override
 	{
+		if (const uint8_t *u = UserCopy (bank))
+		{
+			if (index < 0 || index >= zd::kBankSlots) return false;
+			zd::SlotName (u, index, out);
+			return true;
+		}
 		if (!bankValid (bank)) return false;
 		std::string s = m_pMini->GetSysExFileLoader ()->GetVoiceName (bank, index);
 		CopyName (out, s);
@@ -122,6 +140,14 @@ public:
 
 	bool readVoiceIn (int bank, int index, uint8_t v[kVoiceSize]) override
 	{
+		if (const uint8_t *u = UserCopy (bank))
+		{
+			if (index < 0 || index >= zd::kBankSlots) return false;
+			zd::Voice voice;
+			zd::UnpackVoice (u + 6 + index * zd::kPackedVoice, voice);
+			memcpy (v, voice.d, kVoiceSize);
+			return true;
+		}
 		if (!bankValid (bank)) return false;
 		uint8_t buf[156];
 		m_pMini->GetSysExFileLoader ()->GetVoice (bank, index, buf);
@@ -131,6 +157,8 @@ public:
 
 	bool savePerformance () override { return m_pMini->SavePerformance (false); }
 	int saveVoice (const uint8_t v[kVoiceSize]) override { return SaveVoiceToUserBank (v); }
+	int saveVoiceTo (const uint8_t v[kVoiceSize], int slot) override { return SaveVoiceToUserSlot (v, slot); }
+	int userBankNames (char names[32][kNameLen + 1]) override { return ReadUserBankNames (names) ? 1 : -3; }
 
 	void setMute (int tg, bool muted) override { m_pMini->SetExpression (muted ? 0 : 127, tg); }
 

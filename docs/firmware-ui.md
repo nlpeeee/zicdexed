@@ -72,7 +72,15 @@ With `ZicUI=1` the stock `ButtonPin*` and `EncoderEnabled` must be off (the ship
 | Shift+key 10 | KEYS: keys 1-8 play the current scale on the current TG |
 | Shift+keys 1/2/3 | INIT, MUTATE, OP MUTE (selected operator) |
 | Shift+key 4 | FX: jumps to the MOD page's effects sub-page |
-| Shift+key 7 | SAVE VOICE: writes the edit voice into the user bank `sysex/voice/000099_ZICUSER.syx` (bank 99; same name = same slot, otherwise the next free one). It shows up in BROWSE after a restart |
+| Shift+key 7 | SAVE VOICE: opens the naming screen (below). The voice goes into the user bank `sysex/voice/000099_ZICUSER.syx` (bank 99, 32 slots) and shows up in BROWSE straight away |
 | Shift+key 8 | SAVE PERFORMANCE: needs a `performance` folder at the card root (MiniDexed refuses to save without it; `build.sh` puts an empty one in `out/`, copy it over). Overwrites the current performance, i.e. every TG's voice (edits included), levels, pans and the effects |
+
+### SAVE VOICE screen
+
+![SAVE VOICE](screens/save_voice.png)
+
+It starts with the current voice's name. Encoder 1 changes the character under the cursor (space, A-Z, 0-9, a-z, then a few symbols), encoder 2 moves the cursor, encoder 4 jumps between character sets. Keys 1 and 2 also move the cursor left and right. Encoder 3 chooses the slot: NEW is the first free slot, or 1 to 32 to overwrite one. A name that already exists in the bank picks its own slot by itself and the screen says OVERWRITES in orange. Key 3 saves and returns to the page you came from, key 4 or key 12 cancels. A blank name, or the name INIT VOICE (which marks a free slot), is refused.
+
+MiniDexed only reads its bank files at boot, so BROWSE is served from a copy kept after each save; the saved voice is there at once. Loading bank 99 by MIDI program change still sees the boot-time contents until the next restart.
 
 The hub keeps one `EditSession` per TG and re-reads the synth's live voice on every entry point, so COMPARE, revert, program changes and SysEx all show up. FM macro amounts reset to 0 when that happens. OP MUTE only silences the sound. SAVE VOICE saves the edit voice, so muted operators are saved at their real level; SAVE PERFORMANCE saves what the synth is playing, so un-mute first.

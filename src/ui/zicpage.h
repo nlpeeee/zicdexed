@@ -34,6 +34,7 @@ enum Slot {
 	SLOT_BROWSE,  // d
 	SLOT_MIX,     // f
 	SLOT_KEYS,    // Shift+x
+	SLOT_SAVE,    // Shift+7: name and save the voice
 	kSlotCount
 };
 

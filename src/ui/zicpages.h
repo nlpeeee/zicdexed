@@ -16,6 +16,10 @@ Page* CreateMixPage();     // f: the eight channel strips
 // A weak default in zicregistry.cpp is replaced by the sound-design pages.
 bool SoundDesignShiftKey(Ctx& c, int key);
 
+// Shift+7: opens the naming screen (SLOT_SAVE) for the current TG's edit voice.
+// Toasts and returns false when the user bank cannot be used.
+bool OpenSaveScreen(Ctx& c);
+
 // Called once at start-up: puts every page of this build into its slot.
 void RegisterPages(Ui& ui);
 

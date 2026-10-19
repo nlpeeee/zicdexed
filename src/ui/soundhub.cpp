@@ -139,21 +139,7 @@ bool SoundDesignShiftKey(Ctx& c, int key)
 	SoundHub& h = SoundHub::get();
 	h.bind(c);
 	zd::EditSession& s = h.session();
-	if (key == K_D) {                                                // SAVE VOICE
-		// the edit voice, not what is sounding: no op mutes in it
-		int slot = c.syn.saveVoice(s.edit().d);
-		char msg[32];
-		if (slot >= 0) {
-			s.markSaved();
-			copyStr(msg, "SAVED USER ", sizeof msg);
-			fmtInt(msg + 11, slot + 1);
-			copyStr(msg + (slot + 1 < 10 ? 12 : 13), " - RESTART TO USE", sizeof msg - 13);
-		} else {
-			copyStr(msg, slot == -2 ? "USER BANK FULL" : (slot == -1 ? "SAVE VOICE - NOT IN THIS BUILD" : "SAVE FAILED"), sizeof msg);
-		}
-		c.ui.toast(msg);
-		return true;
-	}
+	if (key == K_D) { OpenSaveScreen(c); return true; }              // SAVE VOICE: name it, then save
 	if (key == K_F) {                                                // SAVE PERFORMANCE
 		c.ui.toast(c.syn.savePerformance() ? "PERFORMANCE SAVED" : "NO PERFORMANCE FOLDER ON SD");
 		return true;

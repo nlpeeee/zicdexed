@@ -20,8 +20,15 @@ struct SoundSynth : FakeSynth {
 		for (int t = 0; t < kMaxTG; t++) bankVoice(0, tgv[t][P_PROGRAM], voice[t]);
 	}
 
-	static void bankVoice(int bank, int idx, uint8_t* out)
+	// bank 3 is the user bank SAVE VOICE writes to
+	uint8_t userVoice[32][kVoiceSize];
+	bool userUsed[32] = {};
+	int userStatus = 1;                // what userBankNames() reports
+	int userSaves = 0, lastUserSlot = -1;
+
+	void bankVoice(int bank, int idx, uint8_t* out)
 	{
+		if (bank == 3 && idx >= 0 && idx < 32 && userUsed[idx]) { memcpy(out, userVoice[idx], kVoiceSize); return; }
 		zd::Voice v = zd::Voice::Init();
 		v.set(zd::G_ALG, (idx * 5 + bank * 11) % 32);
 		for (int o = 0; o < 6; o++) {
@@ -53,6 +60,24 @@ struct SoundSynth : FakeSynth {
 	void revert(int tg) override { bankVoice(tgv[tg][P_BANK], tgv[tg][P_PROGRAM], voice[tg]); nameFrom(tg); }
 	bool savePerformance() override { perfSaves++; return true; }
 	int saveVoice(const uint8_t* v) override { voiceSaves++; memcpy(lastSaved, v, kVoiceSize); return saveResult; }
+	int userBankNames(char names[32][kNameLen + 1]) override
+	{
+		if (userStatus != 1) return userStatus;
+		for (int i = 0; i < 32; i++) {
+			if (userUsed[i]) { memcpy(names[i], userVoice[i] + 145, kNameLen); names[i][kNameLen] = 0; }
+			else strcpy(names[i], "INIT VOICE");
+		}
+		return 1;
+	}
+	int saveVoiceTo(const uint8_t* v, int slot) override
+	{
+		if (saveResult < 0) return saveResult;
+		if (slot < 0) { for (slot = 0; slot < 32 && userUsed[slot]; slot++) {} if (slot >= 32) return -2; }
+		memcpy(userVoice[slot], v, kVoiceSize);
+		userUsed[slot] = true;
+		userSaves++; lastUserSlot = slot;
+		return slot;
+	}
 	int getFx(FxParam p) override { return fx[p]; }
 	int bankCount() override { return 4; }
 	bool bankValid(int b) override { return b >= 0 && b < 4 && b != 2; }
