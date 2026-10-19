@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the stock voice banks for the SD card (sysex/voice/).
 
-Usage: stock_banks.py <dir with the Dexed cart .syx files> <out dir>
+Usage: stock_banks.py <Dexed cart folder (searched recursively)> <out dir>
 
 MiniDexed numbers banks from 1, skips a number that is already taken, and
 shows whatever follows the number in the file name as the bank name. This
@@ -36,10 +36,10 @@ def find(src, key):
     else:
         m = re.match(r"(VRC-\d+)([AB])$", key)
         pat = re.compile(r"^%s\b.*\(%s\)\.syx$" % m.groups(), re.I)
-    hits = [f for f in os.listdir(src) if pat.match(f)]
+    hits = [os.path.join(d, f) for d, _, fs in os.walk(src) for f in fs if pat.match(f)]
     if len(hits) != 1:
         sys.exit("expected one file for %s in %s, found %r" % (key, src, hits))
-    return os.path.join(src, hits[0])
+    return hits[0]
 
 def main():
     if len(sys.argv) != 3:
