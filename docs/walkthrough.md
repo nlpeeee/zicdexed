@@ -66,7 +66,7 @@ A **bank** is a file of 32 voices. A **voice** is one DX7 sound. Each TG has its
 |---|---|
 | 1 to 27 | The stock Yamaha ROM and VRC banks, with themed names (Mixed Classics, Keys & Guitars, Orchestral, Drums, SFX, Tomlyn Pads Lead, and so on). Built by `tools/stock_banks.py`, see the README |
 | 90, "nasty" | 32 DnB and electro voices: REESE BS, WOBBLE BS, NEURO STB, GRIT SUB, FM KICK, METAL SNR, ACID SQLCH, HOOVER and more |
-| 99, "ZICUSER" | Your own saved voices (section 5). It appears in BROWSE after a restart |
+| 99, "ZICUSER" | Your own saved voices (section 5) |
 
 ### The quick way: Program on VOICE
 
@@ -138,25 +138,29 @@ There are two things you can save, and they hold different things.
 | | A voice | A performance |
 |---|---|---|
 | What it is | One sound (the DX7 voice, including operator, LFO, pitch EG, algorithm, transpose and name) | The whole box: all 8 TGs' voices (edits included), bank and program, MIDI channels, volume, pan, reverb sends, cutoff, resonance, detune, mono, portamento, pitch bend, plus the shared reverb and compressor |
-| Save | **Shift + key 7** (SAVE VCE) | **Shift + key 8** (SAVE PRF) |
+| Save | **Shift + key 7** (SAVE VCE), which opens a naming screen | **Shift + key 8** (SAVE PRF) |
 | Goes to | The user bank `sysex/voice/000099_ZICUSER.syx` (bank 99) | The current performance. Out of the box that is the default one, `performance.ini` on the card |
 | Needs | Nothing special | An empty **`performance`** folder at the card root (the builds ship one). Without it you get "NO PERFORMANCE FOLDER ON SD" |
-| Comes back | After a **restart**, in BROWSE: bank "ZICUSER" | By itself at **power-on** (the default performance loads at boot) |
+| Comes back | In BROWSE: bank "ZICUSER" (straight away with the SAVE screen build, after a restart on build 8) | By itself at **power-on** (the default performance loads at boot) |
 
 ### Saving a voice
 
+> **Which build?** The naming screen below comes with PR #5 (SAVE VOICE naming screen). Build 8 and earlier have no screen: Shift + 7 saves at once under the voice's own name into the next free slot (the same name overwrites its slot), says "RESTART TO USE", and there is no rename. This section describes the new behaviour; check that your build has it.
+
 1. Edit the sound on the TG you like.
-2. Press **Shift + 7**. The toast reads "SAVED USER n - RESTART TO USE" where n is the slot in the user bank.
-3. **There is no rename on the device.** The voice keeps the name it had, and that name decides the slot:
-   - The same name as a voice already in ZICUSER overwrites that slot. So saving a second variation of "REESE BS" replaces the first one.
-   - A new name goes into the first free slot.
-   - Voices started from INIT are all called "INIT VOICE", so each one overwrites the previous.
-   - When all 32 slots hold different names you get "USER BANK FULL".
-4. Restart the box. In BROWSE (key 7), turn encoder 2 to ZICUSER, find the voice with encoder 1, and press key 11 to load it.
+2. Press **Shift + 7**. A **SAVE** screen opens with the voice's current name in ten character cells and a line saying what the save will do.
+3. **Name it.**
+   - **Encoder 1 (Char)** changes the character under the cursor.
+   - **Encoder 2 (Cursor)**, or **keys 1 and 2** (left and right), moves the cursor.
+   - **Encoder 4 (Set)** jumps the character between SPACE, A-Z, 0-9, a-z and symbols, so you do not have to scroll the whole list.
+4. **Choose where it goes** with **encoder 3 (Slot)**: **NEW** puts it in the first free slot of the user bank (bank 99, 32 slots), or pick slot 1 to 32 to overwrite that one. If you leave it on its automatic setting and the name matches a voice already in the bank, it targets that voice's slot and the screen warns "OVERWRITES SLOT n". Turning encoder 3 yourself overrides this.
+5. **Key 3 saves.** The toast says "SAVED IN SLOT n OF BANK 99" (or "OVERWROTE SLOT n"). **Key 4 or key 12 cancels** with nothing written.
+6. A blank name, or the name "INIT VOICE", is refused ("GIVE IT A NAME FIRST"). If all 32 slots are taken you get "BANK FULL" until you pick a slot to overwrite.
+7. The new voice shows up in **BROWSE under ZICUSER straight away** (key 7, encoder 2 to ZICUSER, encoder 1 to the voice, key 11 to load).
 
-To keep two versions of one sound, rename the voice off the device (a Dexed or DX7 editor, then copy the bank over WiFi/FTP or the card). Renaming on the device is not in this build.
+**Note:** the save also puts the new name on the live voice. A MIDI program change to bank 99 from a keyboard still sees the boot-time contents of the bank until you restart, because MiniDexed reads its bank files only at start-up.
 
-Saving a voice saves the **edit voice**, so a muted operator (Shift + 3) is saved at its real level.
+Saving a voice saves the **edit voice**, so a muted operator (Shift + 3) is saved at its real level. To rename a voice you already saved, load it, open the SAVE screen, change the name, and pick NEW (or its slot to replace it).
 
 ### Saving a performance
 
@@ -228,7 +232,7 @@ A TG that is both muted and soloed stays muted. Mute and solo are about the **so
 | 4 | MOD (again: LFO, Pitch EG, FX) | FX page |
 | 5 | previous TG | TG MUTE |
 | 6 | next TG | TG SOLO |
-| 7 | BROWSE | SAVE VOICE |
+| 7 | BROWSE | SAVE VOICE (naming screen) |
 | 8 | MIX | SAVE PERFORMANCE |
 | 9 | SHIFT | |
 | 10 | PLAY (hold) | KEYS pads |
@@ -240,8 +244,8 @@ Shift + an encoder = fine steps; on ENV and PITCH EG it switches rates to levels
 ## 8. Things that catch people out
 
 - **Switching voice drops edits.** Program changes, BROWSE load and MIDI program changes replace the TG's voice. Save first (Shift + 7), or use COMPARE and REVERT to see what you would lose.
-- **A saved voice needs a restart** before it shows up in BROWSE.
-- **No rename on the device**, and a repeated name overwrites its slot in ZICUSER.
+- **Check the slot on the SAVE screen.** A name that already exists in ZICUSER targets its own slot, and key 3 then overwrites it. Pick NEW with encoder 3 to keep both.
+- **Builds before PR #5** have no naming screen, need a restart before a saved voice appears in BROWSE, and cannot rename.
 - **Shift + 8 is a whole-box overwrite** of the current performance.
 - **Cutoff, Reso, Volume, Pan, Channel and so on are not part of a saved voice.** They live in the performance.
 - **Do not replace the card's `sysex/voice` folder** when updating. Merge new banks into it, or the stock banks disappear. See the README for the SD steps.
