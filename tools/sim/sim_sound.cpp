@@ -112,5 +112,12 @@ int main(int argc, char** argv)
 	s.press(K_Q); s.press(K_Q); s.press(K_Q);
 	s.run(2000);
 	dump(s.g, dir, "14_rename");
+
+	// BROWSE on the user bank: key 3 reads RENAME
+	s.press(K_V);
+	s.press(K_D);
+	s.turn(1, 3);
+	s.run(2000);
+	dump(s.g, dir, "15_browse_user");
 	return 0;
 }

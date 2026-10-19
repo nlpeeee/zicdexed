@@ -20,7 +20,7 @@ struct SoundSynth : FakeSynth {
 		for (int t = 0; t < kMaxTG; t++) bankVoice(0, tgv[t][P_PROGRAM], voice[t]);
 	}
 
-	// bank 3 is the user bank SAVE VOICE writes to
+	// bank 98 (file 000099) is the user bank SAVE VOICE writes to
 	uint8_t userVoice[32][kVoiceSize];
 	bool userUsed[32] = {};
 	int userStatus = 1;                // what userBankNames() reports
@@ -28,7 +28,7 @@ struct SoundSynth : FakeSynth {
 
 	void bankVoice(int bank, int idx, uint8_t* out)
 	{
-		if (bank == 3 && idx >= 0 && idx < 32 && userUsed[idx]) { memcpy(out, userVoice[idx], kVoiceSize); return; }
+		if (bank == 98 && idx >= 0 && idx < 32 && userUsed[idx]) { memcpy(out, userVoice[idx], kVoiceSize); return; }
 		zd::Voice v = zd::Voice::Init();
 		v.set(zd::G_ALG, (idx * 5 + bank * 11) % 32);
 		for (int o = 0; o < 6; o++) {
@@ -79,8 +79,8 @@ struct SoundSynth : FakeSynth {
 		return slot;
 	}
 	int getFx(FxParam p) override { return fx[p]; }
-	int bankCount() override { return 4; }
-	bool bankValid(int b) override { return b >= 0 && b < 4 && b != 2; }
+	int bankCount() override { return 99; }
+	bool bankValid(int b) override { return (b >= 0 && b < 4 && b != 2) || b == 98; }
 	void bankName(int b, char out[32]) override { snprintf(out, 32, b == 0 ? "ROM1A" : (b == 1 ? "nasty" : "bank3")); }
 	bool voiceNameIn(int b, int i, char* out) override
 	{

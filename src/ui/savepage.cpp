@@ -212,7 +212,7 @@ private:
 
 } // namespace
 
-bool OpenSaveScreen(Ctx& c)
+bool OpenSaveScreen(Ctx& c, int preferSlot)
 {
 	char names[zd::kBankSlots][zd::kNameLen + 1];
 	const int rc = c.syn.userBankNames(names);
@@ -225,6 +225,7 @@ bool OpenSaveScreen(Ctx& c)
 	char nm[zd::kNameLen + 1];
 	h.session().edit().name(nm);
 	g_ed.begin(nm, names);
+	if (preferSlot >= 0) g_ed.setTarget(preferSlot);
 	c.ui.gotoSlot(SLOT_SAVE);
 	return true;
 }

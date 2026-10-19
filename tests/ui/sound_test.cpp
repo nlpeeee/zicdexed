@@ -257,6 +257,30 @@ int main()
 		r.press(K_A);
 		CHECK(r.ui.tg() == 0 && r.ui.slot() == SLOT_SAVE);
 	}
+	{	// BROWSE key 3: RENAME in the user bank (overwrites that slot), SAVE AS from other banks
+		Rig r;
+		zd::Voice u = zd::Voice::Init(); u.setName("MY SOUND"); u.set(zd::G_ALG, 7);
+		memcpy(r.syn.userVoice[2], u.d, kVoiceSize); r.syn.userUsed[2] = true;
+		r.press(K_D);
+		r.turn(1, 1); r.turn(1, 1); r.turn(1, 1);        // bank 1 -> 2 (nasty) -> 4 (skips 3) -> 99
+		CHECK(SoundHub::get().browse().bank() == 98);
+		r.turn(0, 2);                                    // voice 3 (index 2)
+		CHECK(SoundHub::get().browse().index() == 2);
+		r.press(K_E);
+		CHECK(r.ui.slot() == SLOT_SAVE && r.syn.get(P_BANK, 0) == 98 && r.syn.get(P_PROGRAM, 0) == 2);
+		r.press(K_W); r.turn(0, 1);                      // second character: next one up
+		r.press(K_E);
+		CHECK(r.syn.lastUserSlot == 2 && r.syn.userSaves == 1);   // same slot, new name
+		CHECK(r.ui.slot() == SLOT_BROWSE);
+		// from a stock bank: saves a copy into the first free slot
+		r.turn(1, -1);
+		int b = SoundHub::get().browse().bank();
+		CHECK(b != 98);
+		r.press(K_E);
+		CHECK(r.ui.slot() == SLOT_SAVE);
+		r.press(K_E);
+		CHECK(r.syn.lastUserSlot == 0 && r.syn.userSaves == 2);
+	}
 	{	// Shift+r with the Shift map showing (held past 250 ms), from several starting pages
 		for (int start = 0; start < 4; start++) {
 			Rig r;

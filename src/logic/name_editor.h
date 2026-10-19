@@ -28,6 +28,7 @@ public:
 	// slot = overwrite it) until the user picks one with turnTarget().
 	int target() const { return target_; }
 	void turnTarget(int steps);                     // NEW, 1..32
+	void setTarget(int slot);                       // -1 = NEW, or 0..31; the user's choice from then on
 	int freeSlot() const { return free_; }          // first free slot or -1 when full
 	bool overwrites() const { return slot() >= 0 && !SlotFree(slot()); }
 	// Slot the save will really use, or -1 when the bank is full.

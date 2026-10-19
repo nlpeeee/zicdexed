@@ -18,7 +18,7 @@ bool SoundDesignShiftKey(Ctx& c, int key);
 
 // Shift+7: opens the naming screen (SLOT_SAVE) for the current TG's edit voice.
 // Toasts and returns false when the user bank cannot be used.
-bool OpenSaveScreen(Ctx& c);
+bool OpenSaveScreen(Ctx& c, int preferSlot = -1);   // preferSlot: user-bank slot to overwrite by default
 
 // The VOICE page's RENAME sub-page: the SAVE screen's editor, but it only renames
 // the voice on the current TG (nothing is written to a bank). Implemented in savepage.cpp.

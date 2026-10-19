@@ -68,7 +68,7 @@ With `ZicUI=1` the stock `ButtonPin*` and `EncoderEnabled` must be off (the ship
 | Key 2 | FM: Algo, Feedback, Bright, Snarl. Press again: Bite, Tail, Vel, Sync |
 | Key 3 | OPS: Op, Level, Ratio (Shift = fine), Detune. Press again: operator envelope, rates (Shift = levels) |
 | Key 4 | MOD: LFO (wave, speed, pitch, amp), pitch EG, FX (reverb size, damping, level, compressor) |
-| Key 7 | BROWSE: turning Voice previews on the target TG; key 11 loads, leaving the page undoes the preview |
+| Key 7 | BROWSE: turning Voice previews on the target TG; key 11 loads, leaving the page undoes the preview. Key 3 keeps the previewed voice and opens the naming screen: RENAME in the user bank (overwrites that slot with the new name), SAVE AS in any other bank (a renamed copy goes into the user bank) |
 | Shift+key 10 | KEYS: keys 1-8 play the current scale on the current TG |
 | Shift+keys 1/2/3 | INIT, MUTATE, OP MUTE (selected operator) |
 | Shift+key 4 | FX: jumps to the MOD page's effects sub-page |
@@ -80,6 +80,8 @@ With `ZicUI=1` the stock `ButtonPin*` and `EncoderEnabled` must be off (the ship
 ![SAVE VOICE](screens/save_voice.png)
 
 It starts with the current voice's name. Encoder 1 changes the character under the cursor (space, A-Z, 0-9, a-z, then a few symbols), encoder 2 moves the cursor, encoder 4 jumps between character sets. Keys 1 and 2 also move the cursor left and right. Encoder 3 chooses the slot: NEW is the first free slot, or 1 to 32 to overwrite one. A name that already exists in the bank picks its own slot by itself and the screen says OVERWRITES in orange. Key 3 saves and returns to the page you came from, key 4 or key 12 cancels. A blank name, or the name INIT VOICE (which marks a free slot), is refused.
+
+**Rename from BROWSE:** key 3 on the BROWSE page. In the user bank (bank 99) it is RENAME: the naming screen opens with that slot already chosen, so key 3 writes the new name back into the same slot. In any other bank it is SAVE AS, and the stock banks are never modified. Cancelling leaves the previewed voice loaded on the TG.
 
 **Rename without saving:** press key 1 on the VOICE page until you reach the fourth sub-page (after tone, play, mix). It is the same editor, but key 3 only renames the voice on the current TG and key 4 cancels back to the tone sub-page. Nothing is written to a bank; use Shift+key 7 for that. Keys 5 and 6 are ignored on both screens so the name always belongs to the TG you started on.
 

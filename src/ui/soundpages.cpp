@@ -370,14 +370,20 @@ private:
 const zd::PageId kBrowseSubs[1] = { zd::PG_BROWSE };
 const int kRows = 7, kRowH = 15, kListTop = 46;
 
+// The user bank SAVE VOICE writes to: file 000099_ZICUSER.syx is bank id 98.
+constexpr int kUserBankId = 98;
+
 class BrowsePage : public LogicPage {
 public:
 	BrowsePage() : LogicPage("BROWSE", kBrowseSubs, 1) {}
 
 	const char* const* keyLabels(Ctx&, int) override
 	{
-		static const char* const l[4] = { "VOICES", "", "", "LOAD (11)" };
-		return l;
+		// key 3 opens the naming screen: it renames in place in the user bank, and
+		// saves a renamed copy into it from any other bank
+		static const char* const own[4] = { "VOICES", "", "RENAME", "LOAD (11)" };
+		static const char* const other[4] = { "VOICES", "", "SAVE AS", "LOAD (11)" };
+		return hub().browse().active() && hub().browse().bank() == kUserBankId ? own : other;
 	}
 
 	void enter(Ctx& c, int) override
@@ -402,9 +408,10 @@ public:
 		prepare(c, sub);
 		zd::BrowseModel& b = hub().browse();
 		if (!b.active()) return false;
-		const int before = b.target();
+		const int before = b.target(), bankBefore = b.bank();
 		hub().ui().shift = fine;
 		bool preview = zd::AdjustLane(zd::GetPage(zd::PG_BROWSE), i, hub().ui(), steps);
+		if (b.bank() != bankBefore) c.ui.redrawFooter();    // key 3 reads RENAME in the user bank, SAVE AS elsewhere
 		if (i == 2 && b.target() != before) {          // moved to another TG: put the old one back, audition here
 			restore(c, before);
 			preview = true;
@@ -416,6 +423,21 @@ public:
 	bool key(Ctx& c, int, int k, bool down) override
 	{
 		if (!down) return false;
+		if (k == K_E) {                                 // RENAME / SAVE AS: keep the voice, then name it
+			zd::BrowseModel& b = hub().browse();
+			if (!b.active()) return true;
+			const int t = b.target(), bank = b.bank(), idx = b.index();
+			if (savedMask_ & (1u << t)) {
+				c.syn.set(P_BANK, t, bank);
+				c.syn.set(P_PROGRAM, t, idx);
+				savedMask_ &= ~(1u << t);
+				hub().forget(t);
+			}
+			if (t != c.tg) c.ui.setTG(t);
+			Ctx c2 = c.ui.ctx();
+			OpenSaveScreen(c2, bank == kUserBankId ? idx : -1);
+			return true;
+		}
 		if (k == K_C) {                                 // LOAD
 			zd::BrowseModel& b = hub().browse();
 			if (!b.active()) return true;

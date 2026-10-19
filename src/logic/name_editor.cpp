@@ -80,6 +80,12 @@ void NameEditor::turnTarget(int steps)
 	manual_ = true;
 }
 
+void NameEditor::setTarget(int slot)
+{
+	target_ = slot < -1 ? -1 : (slot > kBankSlots - 1 ? kBankSlots - 1 : slot);
+	manual_ = true;
+}
+
 bool NameEditor::blank() const
 {
 	for (int i = 0; i < kNameLen; i++) if (name_[i] != ' ') return false;
