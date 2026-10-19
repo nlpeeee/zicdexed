@@ -63,7 +63,8 @@ A **bank** is a file of 32 voices. A **voice** is one DX7 sound. Each TG has its
 
 ### Performances and renaming in BROWSE
 
-- **Key 2 (PERFS)** swaps the list for the card's **performances**. Encoder 1 scrolls them, the one currently loaded is marked "loaded", **key 11 loads** the highlighted one ("PERFORMANCE LOADING"), and key 2 again (now labelled VOICES) goes back to the voice list. **Loading a performance replaces every TG's voice and settings**, so save anything you want first.
+- **Key 2 (PERFS)** swaps the list for the card's **performances**. Encoder 1 scrolls them, and the one that is loaded is marked "loaded". **Rest on a performance for about half a second and it plays** (marked "previewing", toast "PREVIEW: name"), so you can hear each one without loading it. **Encoder 2 (Bank)** steps through the **performance banks**, the sub-folders of the card's `performance` folder (for example `001_Seed`). **Key 11 keeps** the one you are on. Leaving with key 12 or key 2 puts the performance you started from back. Key 2 again (now labelled VOICES) returns to the voice list.
+- **A preview replaces every TG's voice and settings**, edits included. Save anything you want first (Shift + 7 for a voice, Shift + 8 for the whole setup). If a preview does not arrive you get "PREVIEW DID NOT LOAD" and the loaded performance keeps sounding.
 - **Key 3** is **RENAME** when the list is the user bank (ZICUSER) and **SAVE AS** on any other bank. Either one keeps the previewed voice on its TG and opens the SAVE screen (section 5), on the voice's own slot in ZICUSER for RENAME, or on NEW for SAVE AS.
 
 ### Banks on the card
@@ -178,11 +179,24 @@ Because of that, treat Shift + 8 as "save my whole setup". A good routine: get T
 
 **Not saved:** the TG mute and solo states (Shift + 5/6). They reset to normal at every start. The master volume (MIX, key 8 pressed again) is not stored in the voice either.
 
-### Several performances
+### Several performances: adding, switching, keeping
 
-Shift + 8 overwrites the one you are on. To **switch** performances use **BROWSE, key 2 (PERFS)**, scroll with encoder 1 and press key 11. To **create** a new one, use the stock menu (Shift + key 12): **Performance → Save → New** makes a new numbered file. **Delete** and **Bank** live there too. Return with Shift + 12.
+A **performance** is one file holding a complete setup (section 5). There are three ways to get more of them.
 
-**Note:** the stock menu's name entry for "New" has not been tried on the hardware yet.
+**1. Save your own from the box.**
+- **Shift + 8** overwrites whichever performance is currently loaded. At first that is the default one, `performance.ini` in the card root.
+- To make a **new** one instead, open the stock menu (Shift + 12), go to **Performance → Save → New**, type a name, and confirm. It creates the next numbered file in the bank you are in. Return with Shift + 12. The same Performance menu has **Delete** and **Bank**.
+- Then **switch** between them from BROWSE: key 7, key 2 (PERFS), encoder 1, key 11.
+
+**2. Copy performance files onto the card** (SD card in a PC, or FTP to `ZicDexed.local`, user `admin`, password `admin`, where the card is `/SD`).
+- Put each performance in the card's **`performance`** folder as `NNNNNN_Name.ini`: **six digits, an underscore, a name, `.ini`**, in all fewer than 26 characters (for example `000002_Bass Duo.ini`). The six digits are the performance's number, so keep them unique. The shipped build uses `performance.ini` in the card root as number 1 of the first bank.
+- To add a whole set, copy the **bank folder** into `performance`, named `NNN_Name` (three digits, an underscore, a name, for example `001_Seed`), with its `NNNNNN_Name.ini` files inside. Each folder shows up as a bank on encoder 2 in PERFS.
+- **Restart** the box afterwards so it re-reads the folder. Performances you copy in can use any voices: the voices are stored inside the file, so they sound the same whatever banks are on the card.
+- Wrong file names are simply skipped (too long, no underscore in the right place, a number already used, or number 0).
+
+**3. Keep a backup.** A performance is a plain text file. Copy `performance.ini` and your numbered files off the card now and then. Shift + 8 overwrites without asking.
+
+**Note:** the stock menu's name entry for "New" has not been tried on the hardware yet, and copying files in by hand has not been tried either. Both follow MiniDexed's own file naming, which I checked in its source.
 
 ## 6. The eight TGs
 
@@ -252,7 +266,7 @@ Shift + an encoder = fine steps; on ENV and PITCH EG it switches rates to levels
 ## 8. Things that catch people out
 
 - **A MIDI track resets the voices.** Players and sequencers send Program Change (often 0 on every channel) at the start, stop or end of a track, and MiniDexed reloads the voice on every TG on that channel. The shipped `minidexed.ini` has `MIDIRXProgramChange=0`, so MIDI no longer changes voices. Set it to 1 if you want a track to choose them. The same reset also sends volume, pan and expression (CC 7, 10, 11), which jumped the levels up at the end; `MIDIRXMixerCC=0` ignores those too (set 1 to let a track mix the TGs). Needs the new kernel build.
-- **Switching voice drops edits.** Program changes (the Program lane, MIDI) and loading a performance replace the TG's voice without asking. BROWSE LOAD asks once. Look for the amber dot, and save first (Shift + 7), or use COMPARE and UNDO to see what you would lose.
+- **Switching voice drops edits.** Program changes (the Program lane) and loading or previewing a performance replace the TG's voice without asking. BROWSE LOAD asks once. Look for the amber dot, and save first (Shift + 7), or use COMPARE and UNDO to see what you would lose.
 - **Check the slot on the SAVE screen.** A name that already exists in ZICUSER targets its own slot, and key 3 then overwrites it. Pick NEW with encoder 3 to keep both.
 - **Shift + 8 refuses while an operator is muted.** Un-mute it (Shift + 3) first.
 - **Shift + 8 is a whole-box overwrite** of the current performance.
