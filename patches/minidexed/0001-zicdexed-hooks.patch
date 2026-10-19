@@ -173,7 +173,7 @@ index 4ec0ad0..dbbf89c 100644
  					// Continue without supplicant? Or return false? Decided to continue for now.
  				}
 diff --git a/src/userinterface.cpp b/src/userinterface.cpp
-index b503b21..eae0931 100644
+index b503b21..a5e6c83 100644
 --- a/src/userinterface.cpp
 +++ b/src/userinterface.cpp
 @@ -38,12 +38,14 @@ CUserInterface::CUserInterface (CMiniDexed *pMiniDexed, CGPIOManager *pGPIOManag
@@ -246,7 +246,15 @@ index b503b21..eae0931 100644
  	CString Msg ("\x1B[H\E[?25l");		// cursor home and off
  
  	// first line
-@@ -277,6 +301,25 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const
+@@ -274,9 +298,33 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const
+ 		Msg.Append ("\x1B[K");		// clear end of line
+ 	}
+ 
++	if (m_pZic)
++	{
++		Msg.Append ("\x1B[4;1HShift+12=ZicDexed\x1B[K");	// how to get back (Shift = key 9)
++	}
++
  	LCDWrite (Msg);
  }
  

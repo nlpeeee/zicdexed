@@ -94,7 +94,7 @@ public:
 		hub().bind(c);
 		const zd::Voice& v = hub().session().edit();
 		const int alg = v.algorithm();
-		drawAlgorithm(c, hub().session(), alg, 6, 50, 172, 98);
+		drawAlgorithm(c, hub().session(), alg, 6, 50, 172, 88);
 
 		Gfx& g = c.g;
 		char t[24], b[12];
@@ -111,8 +111,8 @@ public:
 		for (int i = 0; i < 7; i++)
 			g.roundRect((float)(186 + i * 18), 100, 14, 10, 2, i < fb ? c.accent : LINE);
 		static const char* const note[8] = { "off", "a little warmth", "warm", "edge", "buzz", "grit", "harsh", "max: noise + grit" };
-		g.text(186, 116, note[fb], fSmall, dim(c.accent, 218));
-		if (hub().session().dirty()) g.text(186, 134, "edited", fSmall, GREY);
+		g.text(186, 114, note[fb], fSmall, dim(c.accent, 218));
+		if (hub().session().dirty()) g.text(186, 127, "edited", fSmall, GREY);
 	}
 
 	static void drawAlgorithm(Ctx& c, zd::EditSession& s, int alg, int x0, int y0, int w, int h)
@@ -169,7 +169,7 @@ void drawEnvelope(Ctx& c, const int rate[4], const int level[4], bool pitch, con
 	g.text(6, 47, title, fBody, c.accent);
 	g.text(8 + (int)g.textWidth(title, fBody) + 10, 48, pitch ? "pitch envelope  \xB7  Shift: levels" : "envelope  \xB7  Shift: levels", fSmall, GREY);
 
-	const int x0 = 10, y0 = 76, w = 300, h = 70;
+	const int x0 = 10, y0 = 74, w = 300, h = 60;
 	for (int gx = 0; gx <= 6; gx++) g.vline(x0 + gx * 50, y0, h, 0x12131A);
 	if (pitch) g.hline(x0, y0 + h / 2, w, LINE);
 
@@ -220,23 +220,23 @@ public:
 		for (int i = 0; i < zd::kOps; i++) {
 			const int x = 4 + i * cw;
 			const bool sel = i == op, muted = s.opMuted(i);
-			g.roundRect((float)x, 50, (float)(cw - 6), 98, 5, sel ? dim(c.accent, 41) : PANEL, sel ? c.accent : Gfx::NoColor, 1.f);
+			g.roundRect((float)x, 58, (float)(cw - 6), 80, 5, sel ? dim(c.accent, 41) : PANEL, sel ? c.accent : Gfx::NoColor, 1.f);
 			char t[8] = "OP";
 			fmtInt(t + 2, i + 1);
-			g.text(x + 6, 53, t, fLbl, sel ? c.accent : GREY, 1.f);
+			g.text(x + 6, 61, t, fLbl, sel ? c.accent : GREY, 1.f);
 			char r[12];
 			if (v.op(i, zd::OP_PM)) { fmtInt(r, zd::FixedHz(v, i)); strcat(r, "Hz"); }
 			else zd::FormatRatio(r, zd::RatioHundredths(v, i));
-			g.text(x + 6, 64, r, fBody, muted ? DIM : WHITE);
+			g.text(x + 6, 72, r, fBody, muted ? DIM : WHITE);
 			const int lvl = v.op(i, zd::OP_OL);
-			const float bh = 54.f * (float)lvl / 99.f;
-			g.roundRect((float)(x + 6), 138 - 54, 6, 54, 2, LINE);
-			if (bh > 0.5f) g.roundRect((float)(x + 6), 138 - bh, 6, bh, 2, sel ? c.accent : dim(c.accent, 128));
+			const float bh = 44.f * (float)lvl / 99.f;
+			g.roundRect((float)(x + 6), 130 - 44, 6, 44, 2, LINE);
+			if (bh > 0.5f) g.roundRect((float)(x + 6), 130 - bh, 6, bh, 2, sel ? c.accent : dim(c.accent, 128));
 			char n[4];
 			fmtInt(n, lvl);
-			g.text(x + 16, 128, n, fSmall, sel ? WHITE : GREY);
-			if (zd::IsCarrier(alg, i)) g.text(x + 16, 84, "OUT", fLbl, dim(c.accent, 204), 1.f);
-			if (muted) g.text(x + 16, 98, "MUTE", fLbl, GREY, 1.f);
+			g.text(x + 16, 118, n, fSmall, sel ? WHITE : GREY);
+			if (zd::IsCarrier(alg, i)) g.text(x + 16, 90, "OUT", fLbl, dim(c.accent, 204), 1.f);
+			if (muted) g.text(x + 16, 104, "MUTE", fLbl, GREY, 1.f);
 		}
 	}
 };
@@ -281,7 +281,7 @@ public:
 	}
 
 private:
-	static const int kWX = 8, kWY = 66, kWW = 304, kWH = 80;
+	static const int kWX = 8, kWY = 66, kWW = 304, kWH = 68;
 	int phaseLine_ = -1;
 
 	static void lfoName(const zd::Voice& v, char* out)
@@ -351,7 +351,7 @@ private:
 		g.text(8, 47, "EFFECTS", fBody, c.accent);
 		g.text(70, 48, "shared by all tone generators", fSmall, GREY);
 		for (int i = 0; i < 4; i++) {
-			const int y = 66 + i * 21;
+			const int y = 64 + i * 18;
 			const int val = hub().ui().bus->get(rows[i].p, c.tg), mx = hub().ui().bus->max(rows[i].p);
 			g.text(8, y + 1, rows[i].label, fLbl, GREY, 1.f);
 			g.roundRect(110, (float)(y + 2), 160, 8, 3, LINE);
@@ -368,7 +368,10 @@ private:
 // ---------------------------------------------------------------- BROWSE
 
 const zd::PageId kBrowseSubs[1] = { zd::PG_BROWSE };
-const int kRows = 7, kRowH = 15, kListTop = 46;
+const int kRows = 6, kRowH = 15, kListTop = 46;
+
+// The user bank SAVE VOICE writes to: file 000099_ZICUSER.syx is bank id 98.
+constexpr int kUserBankId = 98;
 
 class BrowsePage : public LogicPage {
 public:
@@ -376,7 +379,19 @@ public:
 
 	const char* const* keyLabels(Ctx&, int) override
 	{
-		static const char* const l[4] = { "VOICES", "", "", "LOAD (11)" };
+		// key 3 opens the naming screen: it renames in place in the user bank, and
+		// saves a renamed copy into it from any other bank
+		// key 2 switches between browsing voices and performances
+		static const char* const own[4] = { "VOICE", "PERFS", "RENAME", "" };
+		static const char* const other[4] = { "VOICE", "PERFS", "SAVE AS", "" };
+		static const char* const perf[4] = { "VOICE", "VOICES", "", "" };
+		if (perf_) return perf;
+		return hub().browse().active() && hub().browse().bank() == kUserBankId ? own : other;
+	}
+
+	const char* const* lowerLabels(Ctx&, int) override
+	{
+		static const char* const l[8] = { "TG-", "TG+", "BRWS", "MIX", "SHFT", "PLAY", "LOAD", "EXIT" };
 		return l;
 	}
 
@@ -384,11 +399,29 @@ public:
 	{
 		hub().bind(c);
 		savedMask_ = 0;
+		loadArmed_ = false;
+		dirtyOnEnter_ = hub().session().dirty();
 		hub().browse().begin(hub().session().edit(), c.syn.get(P_BANK, c.tg), c.syn.get(P_PROGRAM, c.tg), c.tg);
 		hub().ui().tg = c.tg;
 	}
 
-	void leave(Ctx& c, int) override { cancel(c); }
+	void leave(Ctx& c, int) override { perf_ = false; cancel(c); }
+
+	void lane(Ctx& c, int sub, int i, LaneView& out) override
+	{
+		if (!perf_) { LogicPage::lane(c, sub, i, out); return; }
+		out.bipolar = false;
+		out.label[0] = out.text[0] = 0;
+		out.frac = 0;
+		if (i == 0) {
+			copyStr(out.label, "Perf", sizeof out.label);
+			fmtInt(out.text, perfN_ ? perfIds_[perfSel_] + 1 : 0);
+			out.frac = frac(perfSel_, 0, perfN_ > 1 ? perfN_ - 1 : 1);
+		} else if (i == 1) {
+			copyStr(out.label, "Count", sizeof out.label);
+			fmtInt(out.text, perfN_);
+		}
+	}
 
 	// Lanes of this page always address the browse target TG.
 	void prepare(Ctx& c, int sub) override
@@ -399,12 +432,21 @@ public:
 
 	bool turn(Ctx& c, int sub, int i, int steps, bool fine) override
 	{
+		if (perf_) {                                    // only the first encoder moves through the list
+			if (i != 0 || !perfN_) return false;
+			perfSel_ += steps;
+			if (perfSel_ < 0) perfSel_ = 0;
+			if (perfSel_ > perfN_ - 1) perfSel_ = perfN_ - 1;
+			return true;
+		}
 		prepare(c, sub);
+		loadArmed_ = false;
 		zd::BrowseModel& b = hub().browse();
 		if (!b.active()) return false;
-		const int before = b.target();
+		const int before = b.target(), bankBefore = b.bank();
 		hub().ui().shift = fine;
 		bool preview = zd::AdjustLane(zd::GetPage(zd::PG_BROWSE), i, hub().ui(), steps);
+		if (b.bank() != bankBefore) c.ui.redrawFooter();    // key 3 reads RENAME in the user bank, SAVE AS elsewhere
 		if (i == 2 && b.target() != before) {          // moved to another TG: put the old one back, audition here
 			restore(c, before);
 			preview = true;
@@ -416,16 +458,56 @@ public:
 	bool key(Ctx& c, int, int k, bool down) override
 	{
 		if (!down) return false;
+		if (k == K_W) {                                 // voices <-> performances
+			if (perf_) { perf_ = false; enter(c, 0); }
+			else if (!enterPerf(c)) return true;
+			c.ui.redrawAll();
+			return true;
+		}
+		if (perf_) {
+			if (k == K_C) {                             // LOAD the selected performance
+				if (!perfN_) return true;
+				const int id = perfIds_[perfSel_];
+				if (!c.syn.loadPerformance(id)) { c.ui.toastError("PERFORMANCE NOT LOADED"); return true; }
+				for (int t = 0; t < kMaxTG; t++) hub().forget(t);   // every TG gets a new voice
+				c.ui.toast("PERFORMANCE LOADING");
+				perf_ = false;
+				c.ui.gotoSlot(SLOT_VOICE);
+				return true;
+			}
+			if (k == K_E) return true;                  // nothing to rename here
+			return false;
+		}
+		if (k == K_E) {                                 // RENAME / SAVE AS: keep the voice, then name it
+			zd::BrowseModel& b = hub().browse();
+			if (!b.active()) return true;
+			const int t = b.target(), bank = b.bank(), idx = b.index();
+			if (savedMask_ & (1u << t)) {
+				c.syn.set(P_BANK, t, bank);
+				c.syn.set(P_PROGRAM, t, idx);
+				savedMask_ &= ~(1u << t);
+				hub().forget(t);
+			}
+			if (t != c.tg) c.ui.setTG(t);
+			Ctx c2 = c.ui.ctx();
+			OpenSaveScreen(c2, bank == kUserBankId ? idx : -1);
+			return true;
+		}
 		if (k == K_C) {                                 // LOAD
 			zd::BrowseModel& b = hub().browse();
 			if (!b.active()) return true;
 			const int t = b.target();
-			if (savedMask_ & (1u << t)) {               // keep the previewed voice as the TG's program
-				c.syn.set(P_BANK, t, b.bank());
-				c.syn.set(P_PROGRAM, t, b.index());
-				savedMask_ &= ~(1u << t);
-				hub().forget(t);
+			if (!(savedMask_ & (1u << t))) { c.ui.toast("NO CHANGE"); return true; }   // nothing previewed: the TG already has this voice
+			if (dirtyOnEnter_ && t == c.tg && !loadArmed_) {   // the load throws the edits away: ask once
+				loadArmed_ = true;
+				c.ui.toast("UNSAVED EDITS - LOAD AGAIN");
+				return true;
 			}
+			// keep the previewed voice as the TG's program
+			c.syn.set(P_BANK, t, b.bank());
+			c.syn.set(P_PROGRAM, t, b.index());
+			savedMask_ &= ~(1u << t);
+
 			c.ui.toast("VOICE LOADED");
 			c.ui.gotoSlot(SLOT_VOICE);
 			return true;
@@ -435,6 +517,7 @@ public:
 
 	void draw(Ctx& c, int) override
 	{
+		if (perf_) { drawPerfs(c); return; }
 		hub().bind(c);
 		zd::BrowseModel& b = hub().browse();
 		Gfx& g = c.g;
@@ -451,13 +534,60 @@ public:
 			if (!b.rowName(idx, nm)) nm[0] = 0;
 			const int dist = idx > b.index() ? idx - b.index() : b.index() - idx;
 			g.text(30, y + 1, nm, fBody, sel ? INK : (dist == 1 ? WHITE : GREY));
-			if (sel && (savedMask_ & (1u << b.target()))) g.textAligned(200, y + 2, 110, "previewing", fSmall, INK, AL_RIGHT);
+			if (sel && (savedMask_ & (1u << b.target()))) g.textAligned(160, y + 2, 110, "previewing", fSmall, INK, AL_RIGHT);
 		}
 	}
 
 private:
+	bool loadArmed_ = false, dirtyOnEnter_ = false;   // edits the TG had when BROWSE opened
 	uint32_t savedMask_ = 0;
 	uint8_t saved_[kMaxTG][kVoiceSize];
+
+	// performance browsing: the valid ids of the card's performance folder
+	static constexpr int kMaxPerf = 128;
+	bool perf_ = false;
+	int perfIds_[kMaxPerf];
+	int perfN_ = 0, perfSel_ = 0;
+
+	bool enterPerf(Ctx& c)
+	{
+		const int last = c.syn.performanceLast();
+		if (last < 0) { c.ui.toast("PERFORMANCES - NOT IN THIS BUILD"); return false; }
+		cancel(c);                                      // undo any voice preview first
+		perfN_ = 0;
+		perfSel_ = 0;
+		const int cur = c.syn.performanceCurrent();
+		for (int id = 0; id <= last && id < kMaxPerf; id++) {
+			if (!c.syn.performanceValid(id)) continue;
+			if (id == cur) perfSel_ = perfN_;
+			perfIds_[perfN_++] = id;
+		}
+		perf_ = true;
+		return true;
+	}
+
+	void drawPerfs(Ctx& c)
+	{
+		Gfx& g = c.g;
+		if (!perfN_) { g.text(8, kListTop + 4, "NO PERFORMANCES ON THE CARD", fBody, GREY); return; }
+		const int cur = c.syn.performanceCurrent();
+		int first = perfSel_ - kRows / 2;
+		if (first > perfN_ - kRows) first = perfN_ - kRows;
+		if (first < 0) first = 0;
+		for (int r = 0; r < kRows && first + r < perfN_; r++) {
+			const int idx = first + r, id = perfIds_[idx], y = kListTop + r * kRowH;
+			const bool sel = idx == perfSel_;
+			if (sel) g.roundRect(2, (float)y, 316, (float)kRowH, 3, c.accent);
+			char num[6];
+			fmtInt(num, id + 1);
+			g.text(8, y + 2, num, fSmall, sel ? INK : DIM);
+			char nm[32];
+			c.syn.performanceName(id, nm);
+			const int dist = idx > perfSel_ ? idx - perfSel_ : perfSel_ - idx;
+			g.text(38, y + 1, nm, fBody, sel ? INK : (dist == 1 ? WHITE : GREY));
+			if (id == cur) g.textAligned(160, y + 2, 110, "loaded", fSmall, sel ? INK : c.accent, AL_RIGHT);
+		}
+	}
 
 	void audition(Ctx& c)
 	{
@@ -495,7 +625,13 @@ public:
 
 	const char* const* keyLabels(Ctx&, int) override
 	{
-		static const char* const l[4] = { "", "", "", "EXIT (12)" };
+		static const char* const l[4] = { "", "", "", "" };
+		return l;
+	}
+
+	const char* const* lowerLabels(Ctx&, int) override
+	{
+		static const char* const l[8] = { "", "", "", "", "SHFT", "", "", "EXIT" };
 		return l;
 	}
 
@@ -551,14 +687,14 @@ private:
 		if (!force && sig == shown_) return;
 		shown_ = sig;
 		Gfx& g = c.g;
-		const int kw = 75, kh = 49;
+		const int kw = 75, kh = 38;
 		for (int i = 0; i < zd::kKeyCount; i++) {
 			const int r = i / 4, col = i % 4;
-			const int x = 4 + col * (kw + 4), y = 48 + r * (kh + 4);
+			const int x = 4 + col * (kw + 4), y = 58 + r * (kh + 4);
 			const bool on = k.held(i), root = k.isRoot(i);
 			g.fillRect(x, y, kw, kh, BG);
 			g.roundRect((float)x, (float)y, (float)kw, (float)kh, 6, on ? c.accent : PANEL, (root && !on) ? dim(c.accent, 153) : Gfx::NoColor, 1.f);
-			g.textAligned(x, y + 8, kw, k.keyLabel(i), fHead, on ? INK : WHITE, AL_CENTER);
+			g.textAligned(x, y + 5, kw, k.keyLabel(i), fHead, on ? INK : WHITE, AL_CENTER);
 			char cap[2] = { (char)('1' + i), 0 };
 			g.text(x + 6, y + 4, cap, fLbl, on ? INK : DIM);
 		}

@@ -5,6 +5,8 @@
 namespace zic {
 
 __attribute__((weak)) bool SoundDesignShiftKey(Ctx&, int) { return false; }
+__attribute__((weak)) bool SoundDesignDirty(Ctx&) { return false; }
+__attribute__((weak)) bool SoundDesignCompare(Ctx&, int, bool) { return false; }
 
 void RegisterPages(Ui& ui)
 {
@@ -15,6 +17,7 @@ void RegisterPages(Ui& ui)
 	static Page* mod = CreateModPage();
 	static Page* browse = CreateBrowsePage();
 	static Page* keys = CreateKeysPage();
+	static Page* save = CreateSavePage();
 	ui.addPage(SLOT_VOICE, voice);
 	ui.addPage(SLOT_FM, fm);
 	ui.addPage(SLOT_OPS, ops);
@@ -22,6 +25,7 @@ void RegisterPages(Ui& ui)
 	ui.addPage(SLOT_BROWSE, browse);
 	ui.addPage(SLOT_KEYS, keys);
 	ui.addPage(SLOT_MIX, mix);
+	ui.addPage(SLOT_SAVE, save);
 }
 
 } // namespace zic

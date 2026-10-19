@@ -42,16 +42,16 @@ int main()
 		r.turn(2, -200);
 		CHECK(r.syn.get(P_DETUNE, 0) == -99);
 		r.turn(3, 7);
-		CHECK(r.syn.get(P_VOLUME, 0) == 107);
+		CHECK(r.syn.get(P_VOLUME, 0) == 104);       // volume steps are capped at 4
 	}
-	{	// page keys: q cycles the VOICE sub-pages; w/e/r/d jump to FM/OPS/MOD/BROWSE
+	{	// page keys: q cycles the VOICE sub-pages (tone, play, mix, rename); w/e/r/d jump to FM/OPS/MOD/BROWSE
 		Rig r;
 		CHECK(r.ui.slot() == SLOT_VOICE && r.ui.sub() == 0);
 		r.press(K_Q); CHECK(r.ui.sub() == 1);
 		r.turn(0, 1); CHECK(r.syn.get(P_MONO, 0) == 1);
 		r.press(K_Q); CHECK(r.ui.sub() == 2);
 		r.turn(3, 1); CHECK(r.syn.get(P_PROGRAM, 0) == 1);   // program steps one voice per click
-		r.press(K_Q); CHECK(r.ui.sub() == 0);
+		r.press(K_Q); CHECK(r.ui.sub() == 0);                // three sub-pages, then back to tone
 		r.press(K_W); CHECK(r.ui.slot() == SLOT_FM);
 		r.press(K_E); CHECK(r.ui.slot() == SLOT_OPS);
 		r.press(K_R); CHECK(r.ui.slot() == SLOT_MOD);
@@ -77,19 +77,51 @@ int main()
 		r.press(K_W); CHECK(r.ui.soloed(1));
 		CHECK(r.syn.muted[0] && !r.syn.muted[1] && r.syn.muted[2]);    // solo silences the others
 		r.press(K_W); CHECK(!r.syn.muted[0] && !r.syn.muted[2]);
-		r.turn(1, -300); CHECK(r.syn.get(P_VOLUME, 1) == 0);
+		r.turn(1, -300); CHECK(r.syn.get(P_VOLUME, 1) == 86);          // fast turns are capped at 4 on volume
+		for (int i = 0; i < 30; i++) r.turn(1, -4);
+		CHECK(r.syn.get(P_VOLUME, 1) == 0);
 		r.turn(2, 5); CHECK(r.syn.get(P_PAN, 1) == 55);
 		CHECK(r.ui.slot() == SLOT_MIX);
 	}
-	{	// PLAY holds a note; COMPARE holds the stored voice; Shift+c reverts
+	{	// mutes are re-asserted when something lifts the gain behind our back (MIDI CC 11, a performance load)
+		Rig r;
+		r.press(K_F); r.press(K_Q);
+		CHECK(r.syn.muted[0]);
+		r.syn.muted[0] = false;                              // as if an expression message arrived
+		r.run(200);
+		CHECK(r.syn.muted[0]);
+		r.press(K_Q); r.syn.muted[0] = false;                // unmuted TGs are left alone
+		int calls = r.syn.muteCalls; r.run(300);
+		CHECK(r.syn.muteCalls == calls && !r.syn.muted[0]);
+	}
+	{	// MIX key again: the MASTER lane
+		Rig r;
+		r.press(K_F); r.press(K_F);
+		CHECK(r.ui.sub() == 1);
+		r.turn(1, 5); CHECK(r.syn.master == 104);
+		r.turn(1, 300); CHECK(r.syn.master == 108);          // capped steps
+		r.turn(1, -1000); CHECK(r.syn.master == 104);
+		for (int i = 0; i < 40; i++) r.turn(1, 4);
+		CHECK(r.syn.master == 127);
+		CHECK(r.syn.get(P_VOLUME, 0) == 100);                // per-TG volume untouched
+		r.turn(0, 1); CHECK(r.ui.tg() == 1);                 // TG lane still works
+	}
+	{	// error toasts stay until the next key; ordinary toasts time out
+		Rig r;
+		r.ui.toast("HELLO"); r.run(1000); CHECK(r.ui.toastShown());
+		r.run(600); CHECK(!r.ui.toastShown());
+		r.ui.toastError("OOPS"); r.run(10000); CHECK(r.ui.toastShown());
+		r.down(K_Q); CHECK(!r.ui.toastShown());
+	}
+	{	// PLAY holds a note; COMPARE holds the stored voice; Shift+c undoes/reverts
 		Rig r;
 		r.down(K_X); CHECK(r.syn.held[0]);
 		r.up(K_X); CHECK(!r.syn.held[0]);
 		r.down(K_X); r.press(K_S); r.up(K_X);          // moving to another TG while held still releases the right note
 		CHECK(!r.syn.held[0] && !r.syn.held[1]);
-		r.down(K_C); CHECK(r.syn.compares == 1);
-		r.up(K_C); CHECK(r.syn.compares == 0);
-		r.down(K_Z); r.press(K_C); r.up(K_Z); CHECK(r.syn.reverts == 1);
+		// with the sound pages registered COMPARE and REVERT run on the edit session (see sound_test)
+		r.down(K_C); r.up(K_C);
+		r.down(K_Z); r.press(K_C); r.up(K_Z);
 	}
 	{	// long v = panic; short v = exit; Shift+v = menu
 		Rig r;

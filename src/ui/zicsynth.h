@@ -87,8 +87,31 @@ public:
 	virtual bool savePerformance() { return false; }
 	// SAVE VOICE: store a voice in the user bank on the SD card. Returns the slot
 	// 0..31, or -1 not supported, -2 user bank full, -3 file error. The voice
-	// shows up in BROWSE after the next restart.
+	// is in BROWSE straight away.
 	virtual int saveVoice(const uint8_t /*v*/[kVoiceSize]) { return -1; }
+	// The 32 slot names of the user bank ("INIT VOICE" = free). 1 = ok, 0 = not
+	// supported, -3 = the file is not a bank we can read.
+	virtual int userBankNames(char /*names*/[32][kNameLen + 1]) { return 0; }
+	// Replace an unreadable user bank file: with the backup of the last good file
+	// (1) or an empty bank (2). -1 not supported, -3 file error.
+	virtual int resetUserBank() { return -1; }
+	// Save into slot 0..31 (the voice's own name is kept), or the first free slot
+	// for -1. Returns the slot, or -1 not supported, -2 bank full, -3 file error.
+	virtual int saveVoiceTo(const uint8_t /*v*/[kVoiceSize], int /*slot*/) { return -1; }
+
+	// Performances (the 8-TG sets in the card's performance folder), for BROWSE.
+	// performanceLast() is the highest id or -1 when not supported; ids in between
+	// may be empty (performanceValid). loadPerformance() only queues the load: the
+	// synth does it a moment later and every TG's voice changes.
+	virtual int performanceLast() { return -1; }
+	virtual bool performanceValid(int /*id*/) { return false; }
+	virtual void performanceName(int /*id*/, char out[32]) { out[0] = 0; }
+	virtual int performanceCurrent() { return -1; }
+	virtual bool loadPerformance(int /*id*/) { return false; }
+
+	// Master output volume, 0..127 (the stock menu's Master Volume).
+	virtual int masterVolume() { return 100; }
+	virtual void setMasterVolume(int /*v*/) {}
 
 	// Mute is a gain stage in front of the TG, independent of the volume lane.
 	virtual void setMute(int tg, bool muted) = 0;

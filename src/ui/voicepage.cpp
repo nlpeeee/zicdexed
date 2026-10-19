@@ -1,5 +1,5 @@
 //
-// VOICE page (key q). Three sub-pages of four lanes each:
+// VOICE page (key 1). Three sub-pages of four lanes each:
 //   tone: Cutoff, Reso, Detune, Volume
 //   play: Mono, Porta, PB, Transpose
 //   mix:  Pan, Reverb, Channel, Program
@@ -30,8 +30,8 @@ const LaneDef kLanes[3][4] = {
 	  { "Channel", P_CHANNEL, LK_CHANNEL }, { "Program", P_PROGRAM, LK_PROGRAM } },
 };
 
-const int kScopeX = 150, kScopeY = 100, kScopeW = 164, kScopeH = 44;
-const int kDotsX = 232, kDotsY = 52;
+const int kScopeX = 150, kScopeY = 94, kScopeW = 164, kScopeH = 44;
+const int kDotsX = 232, kDotsY = 60;
 
 class VoicePage : public Page {
 public:
@@ -63,7 +63,7 @@ public:
 		int v = c.syn.get(d.param, c.tg);
 		if (d.kind == LK_MONO || d.kind == LK_PORTA_MODE) v = steps > 0 ? 1 : 0;
 		else if (d.kind == LK_PROGRAM) v += steps > 0 ? 1 : -1;      // one voice per click
-		else v += steps;
+		else v += d.param == P_VOLUME ? volumeSteps(steps) : steps;
 		const ParamRange& r = paramRange(d.param);
 		if (v < r.min) v = r.min;
 		if (v > r.max) v = r.max;
@@ -71,16 +71,16 @@ public:
 		return d.kind == LK_PROGRAM || d.kind == LK_MONO || d.param == P_PORTA_TIME || d.param == P_PB_RANGE;
 	}
 
-	void enter(Ctx&, int) override { sig_[0] = 0; dots_ = 0xFFFFFFFFu; agc_ = 0; }
+	void enter(Ctx&, int /*sub*/) override { sig_[0] = 0; dots_ = 0xFFFFFFFFu; agc_ = 0; }
 
-	void draw(Ctx& c, int) override
+	void draw(Ctx& c, int /*sub*/) override
 	{
 		drawInfo(c);
 		drawDots(c, true);
 		drawScope(c, true);
 	}
 
-	void tick(Ctx& c, int) override
+	void tick(Ctx& c, int /*sub*/) override
 	{
 		char sig[64];
 		signature(c, sig);
