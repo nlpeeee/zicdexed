@@ -13,9 +13,9 @@
 namespace zic {
 
 constexpr int kLaneH = 44;           // lanes: y 0..43
-constexpr int kPicTop = 44;          // picture: y 44..151
-constexpr int kPicBottom = 152;
-constexpr int kBandTop = 152;        // key labels: y 152..169
+constexpr int kPicTop = 44;          // picture: y 44..141
+constexpr int kPicBottom = 142;
+constexpr int kBandTop = 142;        // key labels: y 142..169 (row 1 = keys 1-4, row 2 = keys 5-12)
 
 // Same shape as the logic layer's LaneView so adapters just copy.
 struct LaneView {
@@ -69,6 +69,8 @@ public:
 
 	// Four labels for q w e r, or nullptr for the standard page-key labels.
 	virtual const char* const* keyLabels(Ctx&, int /*sub*/) { return nullptr; }
+	// Labels for keys 5-12 (eight entries; "" = unused), or nullptr for the standard ones.
+	virtual const char* const* lowerLabels(Ctx&, int /*sub*/) { return nullptr; }
 	// Page-specific keys (not Shift combinations). Return true if consumed.
 	virtual bool key(Ctx&, int /*sub*/, int /*key*/, bool /*down*/) { return false; }
 

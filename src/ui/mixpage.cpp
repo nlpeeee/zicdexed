@@ -11,8 +11,8 @@ namespace zic {
 namespace {
 
 const int kSW = 40;                  // strip width
-const int kBarTop = 70, kBarH = 56;
-const int kStripTop = 48, kStripH = 100;
+const int kBarTop = 76, kBarH = 42;
+const int kStripTop = 58, kStripH = 80;
 
 class MixPage : public Page {
 public:
@@ -166,7 +166,7 @@ private:
 		sig_[i] = active ? signature(c, i) : 0;
 		g.fillRect(x, kStripTop, kSW, kStripH, BG);
 		if (!active) {
-			g.textAligned(x, 51, kSW, "-", fBody, DIM, AL_CENTER);
+			g.textAligned(x, 61, kSW, "-", fBody, DIM, AL_CENTER);
 			return;
 		}
 		if (cur) g.roundRect((float)x + 2, (float)kStripTop, kSW - 4, kStripH, 4, dim(col, 38), col);
@@ -174,18 +174,18 @@ private:
 		char num[4];
 		fmtInt(num, i + 1);
 		if (c.ui.soloed(i)) {
-			g.roundRect((float)x + 10, 50, 20, 15, 3, col);
-			g.textAligned(x, 51, kSW, num, fBody, INK, AL_CENTER);
+			g.roundRect((float)x + 10, 60, 20, 15, 3, col);
+			g.textAligned(x, 61, kSW, num, fBody, INK, AL_CENTER);
 		} else {
-			g.textAligned(x, 51, kSW, num, fBody, off ? DIM : col, AL_CENTER);
+			g.textAligned(x, 61, kSW, num, fBody, off ? DIM : col, AL_CENTER);
 		}
 		drawBar(c, i, kBarTop - 2, kBarTop + kBarH + 2);
 		if (off) g.textAligned(x, kBarTop + 20, kSW, "M", fBody, DIM, AL_CENTER);
 
 		// pan: a dot on a short rail under the bar
 		int pan = c.syn.get(P_PAN, i);
-		g.hline(x + 6, 129, 28, LINE);
-		g.roundRect((float)x + 6 + 26 * pan / 127.f, 127.5f, 3, 3, 1, off ? DIM : col);
+		g.hline(x + 6, 123, 28, LINE);
+		g.roundRect((float)x + 6 + 26 * pan / 127.f, 121.5f, 3, 3, 1, off ? DIM : col);
 
 		char nm[kNameLen + 1], t[kNameLen + 1], u[8];
 		c.syn.voiceName(i, nm);
@@ -193,7 +193,7 @@ private:
 		int k = 0;
 		for (; t[k] && k < 5; k++) u[k] = (t[k] >= 'a' && t[k] <= 'z') ? t[k] - 32 : t[k];
 		u[k] = 0;
-		g.textAligned(x, 134, kSW, u, fLbl, off ? DIM : GREY, AL_CENTER);
+		g.textAligned(x, 126, kSW, u, fLbl, off ? DIM : GREY, AL_CENTER);
 	}
 };
 

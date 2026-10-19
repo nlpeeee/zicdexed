@@ -70,6 +70,7 @@ private:
 	void drawLane(int i);
 	void drawLanes();
 	void drawFooter();
+	void drawTGTag();
 	void drawMap();
 	void refreshLanes(bool force);
 	void normalKey(int key);

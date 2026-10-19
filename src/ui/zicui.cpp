@@ -19,6 +19,9 @@ static const char* subLabel(Slot s, int sub, int count)
 }
 const char* slotName(Slot s) { return kSlotNames[s]; }
 
+// Keys 5-12 on the pages that do not say otherwise.
+static const char* const kLowerKeys[8] = { "TG-", "TG+", "BRWS", "MIX", "SHFT", "PLAY", "COMP", "EXIT" };
+
 static const char* const kPageKeys[4] = { "VOICE", "FM", "OPS", "MOD" };
 
 // Shift map (mockup 09): what each key does with and without Shift.
@@ -186,7 +189,7 @@ void Ui::refreshLanes(bool force)
 
 void Ui::drawFooter()
 {
-	const int y = kBandTop + 2;
+	const int y = kBandTop + 1;
 	g_.fillRect(0, kBandTop, W, H - kBandTop, BG);
 	g_.hline(0, kBandTop, W, LINE);
 	Ctx c = ctx();
@@ -196,7 +199,7 @@ void Ui::drawFooter()
 	for (int i = 0; i < 4; i++) {
 		int x = i * 80;
 		bool on = pageKeys && (int)slot_ == i;
-		if (on) g_.roundRect((float)x + 2, (float)y - 1, 76, 14, 3, accent());
+		if (on) g_.roundRect((float)x + 2, (float)y - 1, 76, 12, 3, accent());
 		Color col = on ? INK : (!labs[i] || !labs[i][0] ? DIM : (pageKeys && !pages_[i] ? DIM : GREY));
 		const char* lab = labs[i];
 		if (on && page()) { const char* sl = subLabel(slot_, sub_[slot_], page()->subCount()); if (sl) lab = sl; }
@@ -207,7 +210,29 @@ void Ui::drawFooter()
 				g_.roundRect((float)(x + 70 - (n - 1 - k) * 5), (float)y + 4, 3, 3, 1, k == sub_[slot_] ? INK : mix(accent(), INK, 150));
 		}
 	}
+	// Second row: keys 5-12 as one strip, each led by its key number.
+	const char* const* low = page() ? page()->lowerLabels(c, sub_[slot_]) : nullptr;
+	if (!low) low = kLowerKeys;
+	for (int idx = 0; idx < 8; idx++) {
+		if (!low[idx] || !low[idx][0]) continue;
+		char t[16];
+		const int key = idx + 5;
+		int n = 0;
+		if (key >= 10) t[n++] = '1';
+		t[n++] = (char)('0' + (key >= 10 ? key - 10 : key));
+		t[n++] = ' ';
+		strcpy(t + n, low[idx]);
+		const bool here = (idx == 2 && slot_ == SLOT_BROWSE) || (idx == 3 && slot_ == SLOT_MIX);
+		g_.textAligned(idx * 40, kBandTop + 14, 40, t, fTiny, here ? accent() : GREY, AL_CENTER, 0.f);
+	}
 	if (toastOn_) showToast();
+}
+
+void Ui::drawTGTag()
+{
+	char t[8] = { 'T', 'G', ' ', (char)('1' + tg_), 0 };
+	g_.roundRect((float)(W - 36), (float)kPicTop + 1, 32, 13, 3, BG, dim(accent(), 150), 1.f);
+	g_.textAligned(W - 36, kPicTop + 2, 32, t, fLbl, accent(), AL_CENTER, 0.f);
 }
 
 void Ui::showToast()
@@ -263,6 +288,7 @@ void Ui::redrawPicture()
 	if (!page()) return;
 	Ctx c = ctx();
 	page()->draw(c, sub_[slot_]);
+	drawTGTag();
 }
 
 void Ui::redrawAll()
@@ -271,7 +297,7 @@ void Ui::redrawAll()
 	if (mapShown_) { drawMap(); return; }
 	g_.clear(BG);
 	drawLanes();
-	if (page()) { Ctx c = ctx(); page()->draw(c, sub_[slot_]); }
+	if (page()) { Ctx c = ctx(); page()->draw(c, sub_[slot_]); drawTGTag(); }
 	else g_.textAligned(0, 90, W, "NO PAGE", fBody, DIM, AL_CENTER, 1.f);
 	drawFooter();
 }

@@ -120,7 +120,7 @@ void drawOf(Ctx& c)
 		strcat(line, g_ed.target() < 0 ? "  (NEXT FREE)" : "");
 	}
 	g.text(10, 114, line, fBody, col);
-	g.text(10, 132, "KEY 3 SAVES, KEY 4 CANCELS", fSmall, GREY);
+	g.text(10, 126, "KEY 3 SAVES, KEY 4 CANCELS", fSmall, GREY);
 }
 
 // put the edited name into the TG's edit voice (the synth gets it too)
@@ -145,6 +145,12 @@ public:
 	const char* const* keyLabels(Ctx&, int) override
 	{
 		static const char* const l[4] = { "< CURSOR", "CURSOR >", "SAVE", "CANCEL" };
+		return l;
+	}
+
+	const char* const* lowerLabels(Ctx&, int) override
+	{
+		static const char* const l[8] = { "", "", "BRWS", "MIX", "SHFT", "PLAY", "COMP", "EXIT" };
 		return l;
 	}
 

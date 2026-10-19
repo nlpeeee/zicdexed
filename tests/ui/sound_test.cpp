@@ -30,6 +30,20 @@ static void flushAll(Gfx& g) { Rect r; static uint16_t buf[W * H]; while (g.take
 
 int main()
 {
+	{	// every page carries "TG n" in the top right of its picture
+		Rig r;
+		const Slot pages[] = { SLOT_VOICE, SLOT_FM, SLOT_OPS, SLOT_MOD, SLOT_BROWSE, SLOT_MIX };
+		for (int tg = 0; tg < 2; tg++) {
+			r.ui.setTG(tg);
+			for (Slot s : pages) {
+				r.ui.gotoSlot(s);
+				int hits = 0;
+				for (int y = kPicTop; y < kPicTop + 14; y++)
+					for (int x = W - 46; x < W; x++) if (r.g.pixel(x, y) != BG) hits++;
+				CHECK(hits > 8);
+			}
+		}
+	}
 	{	// FM page: algorithm and feedback lanes edit the live voice
 		Rig r;
 		r.press(K_W);
@@ -152,6 +166,12 @@ int main()
 		CHECK(r.ui.slot() == SLOT_VOICE);
 		CHECK(r.syn.get(P_PROGRAM, 0) == (prog + 4) % 32);
 		CHECK(r.live() == previewed);
+		// LOAD with nothing previewed changes nothing and stays put
+		r.press(K_D);
+		prog = r.syn.get(P_PROGRAM, 0);
+		r.press(K_C);
+		CHECK(r.ui.slot() == SLOT_BROWSE && r.syn.get(P_PROGRAM, 0) == prog);
+		r.press(K_V);
 		// bank lane skips bank 2, which does not exist
 		r.press(K_D);
 		r.turn(1, 1);

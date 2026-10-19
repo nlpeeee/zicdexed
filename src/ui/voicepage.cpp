@@ -30,8 +30,8 @@ const LaneDef kLanes[3][4] = {
 	  { "Channel", P_CHANNEL, LK_CHANNEL }, { "Program", P_PROGRAM, LK_PROGRAM } },
 };
 
-const int kScopeX = 150, kScopeY = 100, kScopeW = 164, kScopeH = 44;
-const int kDotsX = 232, kDotsY = 52;
+const int kScopeX = 150, kScopeY = 94, kScopeW = 164, kScopeH = 44;
+const int kDotsX = 232, kDotsY = 60;
 
 class VoicePage : public Page {
 public:
