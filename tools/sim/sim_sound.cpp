@@ -126,5 +126,15 @@ int main(int argc, char** argv)
 	s.turn(0, 2);
 	s.run(2000);
 	dump(s.g, dir, "16_browse_perfs");
+
+	// SAVE VOICE with an unreadable user bank file: the RESET screen, then armed
+	s.press(K_V);
+	s.syn.userStatus = -3;
+	s.shiftPress(K_D);
+	s.run(500);
+	dump(s.g, dir, "17_save_reset");
+	s.press(K_E);
+	s.run(200);
+	dump(s.g, dir, "18_save_reset_armed");
 	return 0;
 }

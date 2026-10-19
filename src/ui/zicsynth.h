@@ -92,6 +92,9 @@ public:
 	// The 32 slot names of the user bank ("INIT VOICE" = free). 1 = ok, 0 = not
 	// supported, -3 = the file is not a bank we can read.
 	virtual int userBankNames(char /*names*/[32][kNameLen + 1]) { return 0; }
+	// Replace an unreadable user bank file: with the backup of the last good file
+	// (1) or an empty bank (2). -1 not supported, -3 file error.
+	virtual int resetUserBank() { return -1; }
 	// Save into slot 0..31 (the voice's own name is kept), or the first free slot
 	// for -1. Returns the slot, or -1 not supported, -2 bank full, -3 file error.
 	virtual int saveVoiceTo(const uint8_t /*v*/[kVoiceSize], int /*slot*/) { return -1; }

@@ -179,6 +179,7 @@ public:
 	bool savePerformance () override { return m_pMini->SavePerformance (false); }
 	int saveVoice (const uint8_t v[kVoiceSize]) override { return SaveVoiceToUserBank (v); }
 	int saveVoiceTo (const uint8_t v[kVoiceSize], int slot) override { return SaveVoiceToUserSlot (v, slot); }
+	int resetUserBank () override { return ResetUserBank (); }
 	int userBankNames (char names[32][kNameLen + 1]) override { return ReadUserBankNames (names) ? 1 : -3; }
 
 	void setMute (int tg, bool muted) override { m_pMini->SetExpression (muted ? 0 : 127, tg); }

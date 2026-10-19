@@ -6,7 +6,7 @@ Hardware: Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS,
 
 ## Status
 
-The full UI runs on the hardware: the screen framework (lanes, key band, per-TG colour, Shift key map), all 12 keys and 4 encoders with acceleration, the VOICE, FM, OPS (with envelopes), MOD (LFO, pitch EG, FX), MIX, BROWSE and KEYS pages, PLAY and COMPARE, INIT, MUTATE, OP MUTE, SAVE VOICE (with a naming screen) and SAVE PERFORMANCE, and WiFi with FTP updates. The stock menu is under Shift+key 12. The design is in [docs/ui-design.md](docs/ui-design.md), how it is built is in [docs/firmware-ui.md](docs/firmware-ui.md).
+The full UI runs on the hardware: the screen framework (lanes, key band, per-TG colour, Shift key map), all 12 keys and 4 encoders with acceleration, the VOICE, FM, OPS (with envelopes), MOD (LFO, pitch EG, FX), MIX, BROWSE and KEYS pages, PLAY and COMPARE, INIT, MUTATE, OP MUTE, SAVE VOICE (with a naming screen) and SAVE PERFORMANCE, and WiFi with FTP updates. The stock menu is under Shift+key 12. Saving a voice writes the user bank safely (a temporary file, then a rename, with the previous file kept as `000099_ZICUSER.syx.bak`); if the file is unreadable, SAVE offers a reset instead. After uploading banks over FTP, reboot, because MiniDexed reads bank files only at start-up. The design is in [docs/ui-design.md](docs/ui-design.md), how it is built is in [docs/firmware-ui.md](docs/firmware-ui.md).
 
 ![simulated screens](docs/screens/simulated_contact_sheet.png)
 
