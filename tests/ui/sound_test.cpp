@@ -232,31 +232,6 @@ int main()
 		r.press(K_V); r.shiftPress(K_D);
 		CHECK(r.ui.slot() != SLOT_SAVE);
 	}
-	{	// RENAME: the VOICE page's last sub-page edits the name only, nothing goes to a bank
-		Rig r;
-		r.press(K_Q); r.press(K_Q); r.press(K_Q);
-		CHECK(r.ui.slot() == SLOT_VOICE && r.ui.sub() == 3);
-		r.turn(0, 2);                                // first character B -> D
-		r.press(K_W); r.turn(0, 1);                  // second character: '0' -> '1'
-		r.turn(2, 5);                                // encoder 3 has nothing to pick here
-		r.press(K_E);                                // key 3 applies
-		CHECK(r.ui.sub() == 0 && r.syn.userSaves == 0 && r.syn.voiceSaves == 0);
-		char nm[11]; r.live().name(nm);
-		CHECK(nm[0] == 'D' && nm[1] == '1' && strncmp(nm + 2, " VOI 01", 7) == 0);
-		r.press(K_Q); r.press(K_Q); r.press(K_Q);    // cancel leaves the name alone
-		r.turn(0, 3);
-		r.press(K_R);
-		CHECK(r.ui.sub() == 0);
-		r.live().name(nm);
-		CHECK(nm[0] == 'D');
-		r.press(K_Q); r.press(K_Q); r.press(K_Q);    // TG-/TG+ are ignored while editing
-		r.press(K_S);
-		CHECK(r.ui.tg() == 0 && r.ui.sub() == 3);
-		r.press(K_R);
-		r.shiftPress(K_D);
-		r.press(K_A);
-		CHECK(r.ui.tg() == 0 && r.ui.slot() == SLOT_SAVE);
-	}
 	{	// BROWSE key 3: RENAME in the user bank (overwrites that slot), SAVE AS from other banks
 		Rig r;
 		zd::Voice u = zd::Voice::Init(); u.setName("MY SOUND"); u.set(zd::G_ALG, 7);

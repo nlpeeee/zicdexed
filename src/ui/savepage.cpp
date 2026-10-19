@@ -6,9 +6,6 @@
 //   Keys:     1 cursor left, 2 cursor right, 3 SAVE, 4 CANCEL (key 12 also leaves)
 // The picture is the ten name cells and what the save will do.
 //
-// The same editor is the VOICE page's RENAME sub-page (the Rename* functions at
-// the bottom): it only renames the voice on the current TG, nothing goes to a bank.
-//
 #include "zicpages.h"
 #include "soundhub.h"
 #include "name_editor.h"
@@ -35,7 +32,7 @@ int groupOf(char ch)
 	return 0;
 }
 
-void laneOf(Ctx& c, bool rename, int i, LaneView& out)
+void laneOf(int i, LaneView& out)
 {
 	out.bipolar = false;
 	const char ch = g_ed.name()[g_ed.cursor()];
@@ -57,12 +54,6 @@ void laneOf(Ctx& c, bool rename, int i, LaneView& out)
 		out.frac = frac(g_ed.cursor(), 0, zd::kNameLen - 1);
 		break;
 	case 2:
-		if (rename) {                                   // nothing to choose: the voice stays on its TG
-			copyStr(out.label, "TG", sizeof out.label);
-			fmtInt(out.text, c.tg + 1);
-			out.frac = 0;
-			break;
-		}
 		copyStr(out.label, "Slot", sizeof out.label);
 		if (g_ed.target() < 0) copyStr(out.text, "NEW", sizeof out.text);
 		else fmtInt(out.text, g_ed.target() + 1);
@@ -76,19 +67,19 @@ void laneOf(Ctx& c, bool rename, int i, LaneView& out)
 	}
 }
 
-bool turnOf(bool rename, int i, int steps)
+bool turnOf(int i, int steps)
 {
 	const int dir = steps > 0 ? 1 : -1;
 	switch (i) {
 	case 0: g_ed.turnChar(steps); break;
 	case 1: g_ed.moveCursor(dir); break;
-	case 2: if (!rename) g_ed.turnTarget(dir); break;
+	case 2: g_ed.turnTarget(dir); break;
 	default: g_ed.jumpGroup(dir); break;
 	}
 	return true;
 }
 
-void drawOf(Ctx& c, bool rename)
+void drawOf(Ctx& c)
 {
 	Gfx& g = c.g;
 	const int cw = 30, x0 = 10, y0 = 50, ch = 40;
@@ -103,14 +94,6 @@ void drawOf(Ctx& c, bool rename)
 	}
 	char line[40], b[8];
 	Color col = c.accent;
-	if (rename) {
-		g.text(10, 98, "RENAME VOICE", fLbl, GREY, 1.f);
-		if (g_ed.blank()) { copyStr(line, "GIVE IT A NAME FIRST", sizeof line); col = WARN; }
-		else { copyStr(line, "RENAMES THE VOICE ON TG ", sizeof line); fmtInt(b, c.tg + 1); strcat(line, b); }
-		g.text(10, 114, line, fBody, col);
-		g.text(10, 132, "NOT SAVED TO A BANK: SHIFT + KEY 7 DOES THAT", fSmall, GREY);
-		return;
-	}
 	g.text(10, 98, "BANK 99  USER", fLbl, GREY, 1.f);
 	const int slot = g_ed.slot();
 	if (!g_ed.nameOk()) {
@@ -165,9 +148,9 @@ public:
 		return l;
 	}
 
-	void lane(Ctx& c, int, int i, LaneView& out) override { laneOf(c, false, i, out); }
-	bool turn(Ctx&, int, int i, int steps, bool) override { return turnOf(false, i, steps); }
-	void draw(Ctx& c, int) override { drawOf(c, false); }
+	void lane(Ctx&, int, int i, LaneView& out) override { laneOf(i, out); }
+	bool turn(Ctx&, int, int i, int steps, bool) override { return turnOf(i, steps); }
+	void draw(Ctx& c, int) override { drawOf(c); }
 
 	bool key(Ctx& c, int, int k, bool down) override
 	{
@@ -228,50 +211,6 @@ bool OpenSaveScreen(Ctx& c, int preferSlot)
 	if (preferSlot >= 0) g_ed.setTarget(preferSlot);
 	c.ui.gotoSlot(SLOT_SAVE);
 	return true;
-}
-
-// ---- RENAME (VOICE page, last sub-page) -------------------------------------------
-
-void RenameEnter(Ctx& c)
-{
-	char names[zd::kBankSlots][zd::kNameLen + 1];
-	for (int i = 0; i < zd::kBankSlots; i++) strcpy(names[i], "INIT VOICE");
-	SoundHub& h = SoundHub::get();
-	h.bind(c);
-	char nm[zd::kNameLen + 1];
-	h.session().edit().name(nm);
-	g_ed.begin(nm, names);
-}
-
-void RenameLane(Ctx& c, int i, LaneView& out) { laneOf(c, true, i, out); }
-bool RenameTurn(Ctx&, int i, int steps) { return turnOf(true, i, steps); }
-void RenameDraw(Ctx& c) { drawOf(c, true); }
-
-const char* const* RenameLabels()
-{
-	static const char* const l[4] = { "< CURSOR", "CURSOR >", "RENAME", "CANCEL" };
-	return l;
-}
-
-bool RenameKey(Ctx& c, int k)
-{
-	switch (k) {
-	case K_Q: g_ed.moveCursor(-1); c.ui.redrawPicture(); return true;
-	case K_W: g_ed.moveCursor(1); c.ui.redrawPicture(); return true;
-	case K_E:
-		if (g_ed.blank()) { c.ui.toast("GIVE IT A NAME FIRST"); return true; }
-		applyName(c);
-		SoundHub::get().settle(c.tg);
-		c.ui.toast("VOICE RENAMED");
-		c.ui.gotoSub(SLOT_VOICE, 0);
-		return true;
-	case K_R:
-		c.ui.toast("RENAME CANCELLED");
-		c.ui.gotoSub(SLOT_VOICE, 0);
-		return true;
-	case K_A: case K_S: return true;                   // the name belongs to this TG's voice
-	default: return false;
-	}
 }
 
 Page* CreateSavePage() { static SavePage p; return &p; }

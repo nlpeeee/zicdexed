@@ -20,15 +20,6 @@ bool SoundDesignShiftKey(Ctx& c, int key);
 // Toasts and returns false when the user bank cannot be used.
 bool OpenSaveScreen(Ctx& c, int preferSlot = -1);   // preferSlot: user-bank slot to overwrite by default
 
-// The VOICE page's RENAME sub-page: the SAVE screen's editor, but it only renames
-// the voice on the current TG (nothing is written to a bank). Implemented in savepage.cpp.
-void RenameEnter(Ctx& c);
-void RenameLane(Ctx& c, int i, LaneView& out);
-bool RenameTurn(Ctx& c, int i, int steps);
-bool RenameKey(Ctx& c, int key);                 // down events; true if consumed
-void RenameDraw(Ctx& c);
-const char* const* RenameLabels();
-
 // Called once at start-up: puts every page of this build into its slot.
 void RegisterPages(Ui& ui);
 

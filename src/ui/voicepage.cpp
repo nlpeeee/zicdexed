@@ -1,9 +1,8 @@
 //
-// VOICE page (key q). Three sub-pages of four lanes each:
+// VOICE page (key 1). Three sub-pages of four lanes each:
 //   tone: Cutoff, Reso, Detune, Volume
 //   play: Mono, Porta, PB, Transpose
 //   mix:  Pan, Reverb, Channel, Program
-//   rename: the voice name editor (savepage.cpp); key 1 steps into it from mix
 // The picture is the voice name in large type, bank and program, play flags,
 // the TG activity dots and a live scope of the current TG.
 //
@@ -37,11 +36,10 @@ const int kDotsX = 232, kDotsY = 52;
 class VoicePage : public Page {
 public:
 	const char* name() const override { return "VOICE"; }
-	int subCount() const override { return 4; }
+	int subCount() const override { return 3; }
 
 	void lane(Ctx& c, int sub, int i, LaneView& out) override
 	{
-		if (sub == 3) { RenameLane(c, i, out); return; }
 		const LaneDef& d = kLanes[sub][i];
 		copyStr(out.label, d.label, sizeof out.label);
 		int v = c.syn.get(d.param, c.tg);
@@ -61,7 +59,6 @@ public:
 
 	bool turn(Ctx& c, int sub, int i, int steps, bool /*fine*/) override
 	{
-		if (sub == 3) return RenameTurn(c, i, steps);
 		const LaneDef& d = kLanes[sub][i];
 		int v = c.syn.get(d.param, c.tg);
 		if (d.kind == LK_MONO || d.kind == LK_PORTA_MODE) v = steps > 0 ? 1 : 0;
@@ -74,26 +71,17 @@ public:
 		return d.kind == LK_PROGRAM || d.kind == LK_MONO || d.param == P_PORTA_TIME || d.param == P_PB_RANGE;
 	}
 
-	const char* const* keyLabels(Ctx&, int sub) override { return sub == 3 ? RenameLabels() : nullptr; }
-	bool key(Ctx& c, int sub, int k, bool down) override { return sub == 3 && down && RenameKey(c, k); }
+	void enter(Ctx&, int /*sub*/) override { sig_[0] = 0; dots_ = 0xFFFFFFFFu; agc_ = 0; }
 
-	void enter(Ctx& c, int sub) override
+	void draw(Ctx& c, int /*sub*/) override
 	{
-		sig_[0] = 0; dots_ = 0xFFFFFFFFu; agc_ = 0;
-		if (sub == 3) RenameEnter(c);
-	}
-
-	void draw(Ctx& c, int sub) override
-	{
-		if (sub == 3) { RenameDraw(c); return; }
 		drawInfo(c);
 		drawDots(c, true);
 		drawScope(c, true);
 	}
 
-	void tick(Ctx& c, int sub) override
+	void tick(Ctx& c, int /*sub*/) override
 	{
-		if (sub == 3) return;
 		char sig[64];
 		signature(c, sig);
 		if (strcmp(sig, sig_)) {

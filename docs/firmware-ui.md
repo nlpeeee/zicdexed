@@ -83,8 +83,6 @@ It starts with the current voice's name. Encoder 1 changes the character under t
 
 **Rename from BROWSE:** key 3 on the BROWSE page. In the user bank (bank 99) it is RENAME: the naming screen opens with that slot already chosen, so key 3 writes the new name back into the same slot. In any other bank it is SAVE AS, and the stock banks are never modified. Cancelling leaves the previewed voice loaded on the TG.
 
-**Rename without saving:** press key 1 on the VOICE page until you reach the fourth sub-page (after tone, play, mix). It is the same editor, but key 3 only renames the voice on the current TG and key 4 cancels back to the tone sub-page. Nothing is written to a bank; use Shift+key 7 for that. Keys 5 and 6 are ignored on both screens so the name always belongs to the TG you started on.
-
 MiniDexed only reads its bank files at boot, so BROWSE is served from a copy kept after each save; the saved voice is there at once. Loading bank 99 by MIDI program change still sees the boot-time contents until the next restart.
 
 The hub keeps one `EditSession` per TG and re-reads the synth's live voice on every entry point, so COMPARE, revert, program changes and SysEx all show up. FM macro amounts reset to 0 when that happens. OP MUTE only silences the sound. SAVE VOICE saves the edit voice, so muted operators are saved at their real level; SAVE PERFORMANCE saves what the synth is playing, so un-mute first.
