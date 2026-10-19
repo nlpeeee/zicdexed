@@ -74,7 +74,7 @@ With `ZicUI=1` the stock `ButtonPin*` and `EncoderEnabled` must be off (the ship
 | Shift+keys 1/2/3 | INIT, MUTATE, OP MUTE (selected operator) |
 | Shift+key 4 | FX: jumps to the MOD page's effects sub-page |
 | Shift+key 7 | SAVE VOICE: opens the naming screen (below). The voice goes into the user bank `sysex/voice/000099_ZICUSER.syx` (bank 99, 32 slots) and shows up in BROWSE straight away |
-| Shift+key 8 | SAVE PERFORMANCE: needs a `performance` folder at the card root (MiniDexed refuses to save without it; `build.sh` puts an empty one in `out/`, copy it over). Overwrites the current performance, i.e. every TG's voice (edits included), levels, pans and the effects |
+| Shift+key 8 | SAVE PERFORMANCE: needs a `performance` folder at the card root (MiniDexed refuses to save without it; `build.sh` puts one with the stock performance banks in `out/`; merge it into the card's folder without overwriting files already there). Overwrites the current performance, i.e. every TG's voice (edits included), levels, pans and the effects |
 
 ### SAVE VOICE screen
 
