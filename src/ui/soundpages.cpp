@@ -399,6 +399,8 @@ public:
 	{
 		hub().bind(c);
 		savedMask_ = 0;
+		loadArmed_ = false;
+		dirtyOnEnter_ = hub().session().dirty();
 		hub().browse().begin(hub().session().edit(), c.syn.get(P_BANK, c.tg), c.syn.get(P_PROGRAM, c.tg), c.tg);
 		hub().ui().tg = c.tg;
 	}
@@ -438,6 +440,7 @@ public:
 			return true;
 		}
 		prepare(c, sub);
+		loadArmed_ = false;
 		zd::BrowseModel& b = hub().browse();
 		if (!b.active()) return false;
 		const int before = b.target(), bankBefore = b.bank();
@@ -495,6 +498,11 @@ public:
 			if (!b.active()) return true;
 			const int t = b.target();
 			if (!(savedMask_ & (1u << t))) { c.ui.toast("NO CHANGE"); return true; }   // nothing previewed: the TG already has this voice
+			if (dirtyOnEnter_ && t == c.tg && !loadArmed_) {   // the load throws the edits away: ask once
+				loadArmed_ = true;
+				c.ui.toast("UNSAVED EDITS - LOAD AGAIN");
+				return true;
+			}
 			// keep the previewed voice as the TG's program
 			c.syn.set(P_BANK, t, b.bank());
 			c.syn.set(P_PROGRAM, t, b.index());
@@ -531,6 +539,7 @@ public:
 	}
 
 private:
+	bool loadArmed_ = false, dirtyOnEnter_ = false;   // edits the TG had when BROWSE opened
 	uint32_t savedMask_ = 0;
 	uint8_t saved_[kMaxTG][kVoiceSize];
 

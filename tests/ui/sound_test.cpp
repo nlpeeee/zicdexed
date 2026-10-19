@@ -209,6 +209,16 @@ int main()
 		CHECK(r.ui.slot() == SLOT_VOICE);
 		CHECK(r.syn.get(P_PROGRAM, 0) == (prog + 4) % 32);
 		CHECK(r.live() == previewed);
+		// LOAD over unsaved edits asks first, then drops them
+		r.press(K_W);
+		r.turn(2, 10);                               // edit the voice
+		r.press(K_D);
+		r.turn(0, 2);
+		prog = r.syn.get(P_PROGRAM, 0);
+		r.press(K_C);
+		CHECK(r.ui.slot() == SLOT_BROWSE && r.syn.get(P_PROGRAM, 0) == prog);
+		r.press(K_C);
+		CHECK(r.ui.slot() == SLOT_VOICE && r.syn.get(P_PROGRAM, 0) == (prog + 2) % 32);
 		// LOAD with nothing previewed changes nothing and stays put
 		r.press(K_D);
 		prog = r.syn.get(P_PROGRAM, 0);
