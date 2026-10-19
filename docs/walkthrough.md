@@ -42,7 +42,7 @@ The pages you reach with the unshifted keys:
 3. PLAY and the KEYS pads sound **only the current TG**, whatever its MIDI channel is set to. A keyboard only reaches the TGs whose **Channel** matches (section 6).
 4. **Nothing playing, or notes stuck?** Hold key 12 for 0.7 s (panic).
 
-**Note:** the builds ship a default `performance.ini` (TG 1 on nasty bank voice 1 REESE BS, OMNI, TGs 2 to 8 OFF), so you hear that at power-on. With no `performance.ini` on the card at all, MiniDexed starts with TG 1 listening on OMNI (every channel) and TGs 2 to 8 set to OFF. So a keyboard plays TG 1 only until you set the other TGs' channels and save (section 5). If a `performance.ini` is already on the card, the channels come from that instead; check Channel on VOICE sub-page 3.
+**Note:** the builds ship a default `performance.ini` (the stock MiniDexed "Rock Piano": TGs 1 to 3 layered on OMNI, TGs 4 to 8 OFF), so you hear that at power-on. The file must be called exactly `performance.ini` in the card root; Windows can hide a `.txt` on the end. With no `performance.ini` on the card at all, MiniDexed starts with TG 1 listening on OMNI (every channel) and TGs 2 to 8 set to OFF. So a keyboard plays TG 1 only until you set the other TGs' channels and save (section 5). If a `performance.ini` is already on the card, the channels come from that instead; check Channel on VOICE sub-page 3.
 
 ## 3. Changing bank and instrument
 
