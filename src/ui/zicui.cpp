@@ -10,6 +10,13 @@ const Color kTGColor[kMaxTG] = {
 };
 
 static const char* const kSlotNames[kSlotCount] = { "VOICE", "FM", "OPS", "MOD", "BROWSE", "MIX", "KEYS" };
+// The key label of the active page names the sub-page it is on, so MOD reads FX when you are on FX.
+static const char* subLabel(Slot s, int sub, int count)
+{
+	if (s == SLOT_OPS && count == 2) return sub ? "ENVELOPE" : "OPERATORS";
+	if (s == SLOT_MOD && count == 3) return sub == 0 ? "LFO" : (sub == 1 ? "PITCH EG" : "FX");
+	return nullptr;
+}
 const char* slotName(Slot s) { return kSlotNames[s]; }
 
 static const char* const kPageKeys[4] = { "VOICE", "FM", "OPS", "MOD" };
@@ -181,7 +188,9 @@ void Ui::drawFooter()
 		bool on = pageKeys && (int)slot_ == i;
 		if (on) g_.roundRect((float)x + 2, (float)y - 1, 76, 14, 3, accent());
 		Color col = on ? INK : (!labs[i] || !labs[i][0] ? DIM : (pageKeys && !pages_[i] ? DIM : GREY));
-		if (labs[i]) g_.textAligned(x, y, 80, labs[i], fLbl, col, AL_CENTER, 1.f);
+		const char* lab = labs[i];
+		if (on && page()) { const char* sl = subLabel(slot_, sub_[slot_], page()->subCount()); if (sl) lab = sl; }
+		if (lab) g_.textAligned(x, y, 80, lab, fLbl, col, AL_CENTER, 1.f);
 		if (on && page() && page()->subCount() > 1) {
 			int n = page()->subCount();
 			for (int k = 0; k < n; k++)
