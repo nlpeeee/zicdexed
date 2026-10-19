@@ -54,12 +54,78 @@ The screens above are not mock-ups: they are rendered on a PC by the same `src/u
 
 Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS, SPI mode 3), PCM5102 I2S DAC, 4 encoders without push (26/13, 6/5, 0/9, 27/4), 12 keys on GPIO 20 16 25 14 / 12 1 24 15 / 7 8 23 22 (active low). MIDI comes in over USB: a USB host keyboard, `USBGadget=1` to play from a PC, or AppleMIDI over WiFi. There is no DIN/serial MIDI on this build.
 
-## Quick start
+## Install a release on an SD card
 
-1. Format an SD card as FAT32 and copy a MiniDexed release onto it.
-2. Build with `./build.sh` (see [Building](#building)), then copy `kernel8.img` and `minidexed.ini` from `out/` to the card root.
-3. Merge `out/sysex/voice/` into the card's `sysex/voice/` and `out/performance/` into the card's `performance/`, without overwriting files already on the card. Details in [SD card](#sd-card).
-4. Power up. You land on VOICE for TG 1. Hold key 10 to hear it.
+Use this if you just want to play. You need an SD card (FAT32), a card reader and a PC. No build tools.
+
+**1. Make a card that boots a Pi.** ZicDexed is an overlay on a [MiniDexed release](https://github.com/probonopd/MiniDexed/releases). Format the card as FAT32, then unzip the latest MiniDexed release onto its root. That gives you the Raspberry Pi boot files, the stock `sysex/voice` banks and the stock `performance` folder. Do not copy MiniDexed's own `kernel8.img` or `minidexed.ini`: step 3 replaces them.
+
+**2. Download the ZicDexed card package.** On the [Releases page](https://github.com/nlpeeee/zicdexed/releases) get `ZicDexed_v1_1_card.zip` (or the newest one) and unzip it. Inside is one folder, `ZicDexed_v1_1/`, and what you copy is its **contents**, not the folder itself.
+
+**3. Copy it onto the card root.**
+
+| From the package | To the card | How |
+|---|---|---|
+| `kernel8.img`, `minidexed.ini`, `performance.ini` | root | Replace the files with the same name |
+| `sysex/voice/000090_nasty.syx` | `sysex/voice/` | **Merge**: add the file, never replace the folder |
+| `performance/` | `performance/` | **Merge**: add files, never replace the folder or overwrite performances you saved |
+| `wpa_supplicant.conf.example` | root | Only for WiFi, see below |
+
+The card must end up with a `performance` folder, or Shift+8 (SAVE PERFORMANCE) says "NO PERFORMANCE FOLDER ON SD". Copy without overwriting: on Windows `robocopy performance X:\performance /E /XC /XN /XO` (`X:` is the card), on Linux or macOS `cp -rn performance/. /path/to/card/performance/`. Any file manager's "skip existing" option does the same.
+
+Why merge: MiniDexed numbers banks from the 6-digit start of the file name, so a file with the same number hides the old one. The nasty bank is 000090 on purpose, and SAVE VOICE writes your own voices to bank 99 (`000099_ZICUSER.syx`), which a replaced folder would delete.
+
+**4. Optional: WiFi (FTP updates, AppleMIDI).** The release does not include the WiFi chip firmware.
+1. Get it: run `tools/get-wifi-firmware.ps1` in PowerShell (Windows) or `tools/get-wifi-firmware.sh` (Linux, macOS) from a clone of this repo, or take `out/firmware/` from a source build. Copy the resulting `firmware` folder to the card root.
+2. Copy `wpa_supplicant.conf.example` to `wpa_supplicant.conf` on the card, and set `country`, `ssid` and `psk`. Keep only those lines and the `network={}` block.
+3. No WiFi wanted? Set `NetworkEnabled=0` in `minidexed.ini` on the card. With WiFi on and no `firmware` folder the box can stop at the first screen.
+
+More in [docs/wifi.md](docs/wifi.md).
+
+**5. Factory Yamaha banks.** The Yamaha cartridges are not redistributed here. The MiniDexed release already has its own `sysex/voice` set. If you own the Dexed cartridge collection, `python3 tools/stock_banks.py <Dexed cart folder> <out folder>` writes 27 themed banks, `000001` to `000027`, to merge into `sysex/voice/`. Bank 1 on the box is the firmware's built-in set only while no `000001_*.syx` is on the card.
+
+**6. Power up.** Put the card in the Pi and switch on. You land on VOICE for TG 1. Hold key 10 to hear a note. After uploading banks over FTP or by hand, reboot: MiniDexed reads bank files only at start-up. The [walkthrough](docs/walkthrough.md) takes you through the rest.
+
+MIDI comes in over USB: a USB host keyboard, or `USBGadget=1` in `minidexed.ini` to play from a PC.
+
+## Build from source
+
+Use this to change the firmware. It runs on Linux (or WSL on Windows) and needs a network connection and some patience: the first build compiles the Circle libraries.
+
+**Prerequisites:** `bash`, `git`, `make`, `gcc` and `python3`, plus the **Arm GNU toolchain 13.3.rel1, `aarch64-none-elf`** (from [developer.arm.com](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads), the "AArch64 bare-metal target (aarch64-none-elf)" download for your host). Unpack it and put its `bin` on your `PATH`:
+
+```
+export PATH=$HOME/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-elf/bin:$PATH
+aarch64-none-elf-gcc --version     # must print 13.3.rel1
+```
+
+**Build:**
+
+```
+git clone https://github.com/nlpeeee/zicdexed
+cd zicdexed
+./build.sh
+```
+
+`build.sh` clones MiniDexed at a pinned commit into `build/`, applies the patches in `patches/`, adds the code in `src/` and builds. It also downloads the WiFi firmware. When it finishes, `out/` is the SD card overlay:
+
+| In `out/` | What |
+|---|---|
+| `kernel8.img` | The firmware |
+| `minidexed.ini`, `performance.ini` | Settings and the default performance (from `config/`) |
+| `sysex/voice/` | The nasty bank |
+| `performance/` | The stock MiniDexed performance banks |
+| `firmware/` | WiFi chip firmware |
+| `wpa_supplicant.conf.example` | WiFi network template |
+
+Copy `out/` onto the card exactly as in steps 3 and 4 above, with `out/` standing in for the unzipped package.
+
+**Options and tips**
+- `ZIC_QUICK=1 ./build.sh` rebuilds only MiniDexed and the ZicDexed sources. Use it after a first full build.
+- `WIFI_FIRMWARE=0 ./build.sh` skips the firmware download (offline builds).
+- `SYNTH_DEXED_URL=https://github.com/probonopd/Synth_Dexed.git ./build.sh` if codeberg.org is not reachable.
+- Without a network, or to check the UI only: `make -C tests/ui test` runs the host tests, and [docs/simulator.md](docs/simulator.md) runs the real UI on a PC with a fake card.
+- With the box on WiFi, [docs/wifi.md](docs/wifi.md) shows how to push a new `kernel8.img` over FTP without taking the card out.
 
 ## Repo layout
 
@@ -73,23 +139,8 @@ Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS, SPI mode 
 | `config/minidexed.ini` | Settings for the ZicPixel |
 | `performance/` | The stock MiniDexed performance banks (GPL-3.0, see [performance/README.md](performance/README.md)), copied to `out/performance/` |
 | `sysex/voice/` | Extra voice banks (`000090_nasty.syx`: 32 DnB/electro patches). The stock Yamaha banks are not shipped: `python3 tools/stock_banks.py <Dexed cart dir> <out>` builds them as banks 1-27 with themed names. Bank 1 shown on the device is the firmware's built-in set only while no `000001_*.syx` is on the card |
-| `tools/` | `fontgen.py` (Inter to bitmaps), `mockups/` (design renders), `sim/` (PC simulator), `hostsim/` ([UI on a fake SD card](docs/simulator.md)), `nasty_makebank.py`, `stock_banks.py` |
+| `tools/` | `get-wifi-firmware.ps1` / `.sh` (WiFi firmware download), `fontgen.py` (Inter to bitmaps), `mockups/` (design renders), `sim/` (PC simulator), `hostsim/` ([UI on a fake SD card](docs/simulator.md)), `nasty_makebank.py`, `stock_banks.py` |
 | `tests/ui/` | Host tests: `make -C tests/ui test` |
-
-## Building
-
-Needs the Arm GNU toolchain 13.3.rel1 `aarch64-none-elf` on `PATH`, then `./build.sh`. Set `SYNTH_DEXED_URL=https://github.com/probonopd/Synth_Dexed.git` if codeberg is unreachable. After a first full build, `ZIC_QUICK=1 ./build.sh` rebuilds only MiniDexed and the ZicDexed sources.
-
-## SD card
-
-1. Format the card as FAT32 and copy a MiniDexed release onto it.
-2. Copy `kernel8.img` and `minidexed.ini` from `out/` onto the card root. This replaces the two files with the same name, which is what you want. Also copy `performance.ini`, the default performance loaded at power-on (the stock MiniDexed "Rock Piano" from 001_Seed, 3 layered TGs on OMNI; its voices are stored inside the file, so it sounds the same whatever banks are on the card). An older `performance.ini` on the card wins over the firmware defaults, so replace it (and delete any stale `000001_nasty.syx` from build 1-3 cards).
-3. **Merge** `out/sysex/voice/` into the card's `sysex/voice/`. Never replace the folder: the stock banks live there. MiniDexed numbers banks from the 6-digit prefix of the file name, so a file with the same number as a stock bank hides it. The nasty bank uses 000090 for that reason, and SAVE VOICE writes bank 99.
-4. If the stock banks have been lost or overwritten, rebuild them from your Dexed cartridge collection: `python3 tools/stock_banks.py <Dexed cart folder> <out folder>` writes 000001-000027 with themed names (Yamaha ROM3/ROM4 and VRC-101 to VRC-112). Copy them into `sysex/voice/`. The Yamaha banks are not stored in this repo.
-5. **Merge** `out/performance/` into the card's `performance/` folder (create it if the card has none). It holds the stock MiniDexed performance banks (001_Seed, 002_Greenhouse, 003_Oasis, 128_Laboratory). Never replace the folder, and never overwrite files that are already there: performances you saved with Shift+8 or the stock menu have the same kind of names. Copy without overwriting, e.g. on Windows `robocopy out\performance X:\performance /E /XC /XN /XO` (X: = the card), on Linux/macOS `cp -rn out/performance/. /path/to/card/performance/`. SAVE PERFORMANCE needs the folder.
-6. For WiFi, add a `firmware` folder and `wpa_supplicant.conf` as described in [docs/wifi.md](docs/wifi.md). Without them, set `NetworkEnabled=0` in `minidexed.ini`.
-
-MIDI comes in over USB (USB host keyboard, or `USBGadget=1` to play from a PC), or over WiFi with AppleMIDI/RTP-MIDI once networking is turned on. Setup and firmware updates over WiFi are in [docs/wifi.md](docs/wifi.md).
 
 ## Licence
 
