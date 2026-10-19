@@ -42,7 +42,7 @@ int main()
 		r.turn(2, -200);
 		CHECK(r.syn.get(P_DETUNE, 0) == -99);
 		r.turn(3, 7);
-		CHECK(r.syn.get(P_VOLUME, 0) == 107);
+		CHECK(r.syn.get(P_VOLUME, 0) == 104);       // volume steps are capped at 4
 	}
 	{	// page keys: q cycles the VOICE sub-pages (tone, play, mix, rename); w/e/r/d jump to FM/OPS/MOD/BROWSE
 		Rig r;
@@ -77,9 +77,41 @@ int main()
 		r.press(K_W); CHECK(r.ui.soloed(1));
 		CHECK(r.syn.muted[0] && !r.syn.muted[1] && r.syn.muted[2]);    // solo silences the others
 		r.press(K_W); CHECK(!r.syn.muted[0] && !r.syn.muted[2]);
-		r.turn(1, -300); CHECK(r.syn.get(P_VOLUME, 1) == 0);
+		r.turn(1, -300); CHECK(r.syn.get(P_VOLUME, 1) == 86);          // fast turns are capped at 4 on volume
+		for (int i = 0; i < 30; i++) r.turn(1, -4);
+		CHECK(r.syn.get(P_VOLUME, 1) == 0);
 		r.turn(2, 5); CHECK(r.syn.get(P_PAN, 1) == 55);
 		CHECK(r.ui.slot() == SLOT_MIX);
+	}
+	{	// mutes are re-asserted when something lifts the gain behind our back (MIDI CC 11, a performance load)
+		Rig r;
+		r.press(K_F); r.press(K_Q);
+		CHECK(r.syn.muted[0]);
+		r.syn.muted[0] = false;                              // as if an expression message arrived
+		r.run(200);
+		CHECK(r.syn.muted[0]);
+		r.press(K_Q); r.syn.muted[0] = false;                // unmuted TGs are left alone
+		int calls = r.syn.muteCalls; r.run(300);
+		CHECK(r.syn.muteCalls == calls && !r.syn.muted[0]);
+	}
+	{	// MIX key again: the MASTER lane
+		Rig r;
+		r.press(K_F); r.press(K_F);
+		CHECK(r.ui.sub() == 1);
+		r.turn(1, 5); CHECK(r.syn.master == 104);
+		r.turn(1, 300); CHECK(r.syn.master == 108);          // capped steps
+		r.turn(1, -1000); CHECK(r.syn.master == 104);
+		for (int i = 0; i < 40; i++) r.turn(1, 4);
+		CHECK(r.syn.master == 127);
+		CHECK(r.syn.get(P_VOLUME, 0) == 100);                // per-TG volume untouched
+		r.turn(0, 1); CHECK(r.ui.tg() == 1);                 // TG lane still works
+	}
+	{	// error toasts stay until the next key; ordinary toasts time out
+		Rig r;
+		r.ui.toast("HELLO"); r.run(1000); CHECK(r.ui.toastShown());
+		r.run(600); CHECK(!r.ui.toastShown());
+		r.ui.toastError("OOPS"); r.run(10000); CHECK(r.ui.toastShown());
+		r.down(K_Q); CHECK(!r.ui.toastShown());
 	}
 	{	// PLAY holds a note; COMPARE holds the stored voice; Shift+c reverts
 		Rig r;

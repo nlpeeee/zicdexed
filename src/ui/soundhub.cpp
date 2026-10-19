@@ -141,7 +141,8 @@ bool SoundDesignShiftKey(Ctx& c, int key)
 	zd::EditSession& s = h.session();
 	if (key == K_D) { OpenSaveScreen(c); return true; }              // SAVE VOICE: name it, then save
 	if (key == K_F) {                                                // SAVE PERFORMANCE
-		c.ui.toast(c.syn.savePerformance() ? "PERFORMANCE SAVED" : "NO PERFORMANCE FOLDER ON SD");
+		if (c.syn.savePerformance()) c.ui.toast("PERFORMANCE SAVED");
+		else c.ui.toastError("NO PERFORMANCE FOLDER ON SD");
 		return true;
 	}
 	switch (key) {

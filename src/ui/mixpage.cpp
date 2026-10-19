@@ -1,6 +1,7 @@
 //
-// MIX page (key f): the eight channel strips. Encoders: TG, Volume, Pan, Reverb.
-// q mutes and w solos the current TG. Strips are drawn in their TG colour with
+// MIX page (key 8): the eight channel strips. Encoders: TG, Volume, Pan, Reverb.
+// Pressing key 8 again shows the MASTER lane (TG, Master volume) over the same strips.
+// Keys 1 / 2 mute and solo the current TG. Strips are drawn in their TG colour with
 // a live level tick; the current TG's strip is outlined.
 //
 #include "zicpages.h"
@@ -17,10 +18,24 @@ const int kStripTop = 48, kStripH = 100;
 class MixPage : public Page {
 public:
 	const char* name() const override { return "MIX"; }
+	int subCount() const override { return 2; }
 
-	void lane(Ctx& c, int, int i, LaneView& out) override
+	void lane(Ctx& c, int sub, int i, LaneView& out) override
 	{
 		out.bipolar = false;
+		if (sub == 1 && i > 0) {
+			if (i == 1) {
+				copyStr(out.label, "Master", sizeof out.label);
+				int v = c.syn.masterVolume();
+				fmtInt(out.text, v);
+				out.frac = frac(v, 0, 127);
+			} else {
+				out.label[0] = 0;
+				out.text[0] = 0;
+				out.frac = 0.f;
+			}
+			return;
+		}
 		switch (i) {
 		case 0:
 			copyStr(out.label, "TG", sizeof out.label);
@@ -52,9 +67,17 @@ public:
 		}
 	}
 
-	bool turn(Ctx& c, int, int i, int steps, bool) override
+	bool turn(Ctx& c, int sub, int i, int steps, bool) override
 	{
 		if (i == 0) { c.ui.setTG(c.tg + (steps > 0 ? 1 : -1)); return false; }
+		if (sub == 1) {
+			if (i == 1) {
+				int v = c.syn.masterVolume() + volumeSteps(steps);
+				c.syn.setMasterVolume(v < 0 ? 0 : (v > 127 ? 127 : v));
+			}
+			return false;
+		}
+		if (i == 1) steps = volumeSteps(steps);
 		TGParam p = i == 1 ? P_VOLUME : (i == 2 ? P_PAN : P_REVERB);
 		int v = c.syn.get(p, c.tg) + steps;
 		const ParamRange& r = paramRange(p);

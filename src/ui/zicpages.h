@@ -27,6 +27,9 @@ void RegisterPages(Ui& ui);
 void fmtInt(char* out, int v, bool plus = false);
 void fmtPan(char* out, int pan);          // C, L12, R40
 void fmtChannel(char* out, int ch);       // 1..16, OMNI, OFF
+// Fast encoder turns are multiplied up for 0..99 ranges; on a volume lane that
+// is a jump of up to 6 dB per click, so cap it.
+inline int volumeSteps(int steps) { return steps > 4 ? 4 : (steps < -4 ? -4 : steps); }
 inline float frac(int v, int lo, int hi) { return hi > lo ? (float)(v - lo) / (float)(hi - lo) : 0.f; }
 void copyStr(char* dst, const char* src, int cap);
 void trimName(char* dst, const char* src);   // voice name without trailing spaces

@@ -168,9 +168,9 @@ public:
 private:
 	void save(Ctx& c)
 	{
-		if (!g_ed.nameOk()) { c.ui.toast("GIVE IT A NAME FIRST"); return; }
+		if (!g_ed.nameOk()) { c.ui.toastError("GIVE IT A NAME FIRST"); return; }
 		const int slot = g_ed.slot();
-		if (slot < 0) { c.ui.toast("USER BANK FULL - PICK A SLOT"); return; }
+		if (slot < 0) { c.ui.toastError("USER BANK FULL - PICK A SLOT"); return; }
 		applyName(c);
 		SoundHub& h = SoundHub::get();
 		zd::EditSession& s = h.session();
@@ -189,7 +189,7 @@ private:
 			leaveTo(c);
 			return;
 		}
-		c.ui.toast(rc == -2 ? "USER BANK FULL" : (rc == -1 ? "SAVE VOICE - NOT IN THIS BUILD" : "SAVE FAILED - SD CARD"));
+		c.ui.toastError(rc == -2 ? "USER BANK FULL" : (rc == -1 ? "SAVE VOICE - NOT IN THIS BUILD" : "SAVE FAILED - SD CARD"));
 	}
 };
 
@@ -200,7 +200,7 @@ bool OpenSaveScreen(Ctx& c, int preferSlot)
 	char names[zd::kBankSlots][zd::kNameLen + 1];
 	const int rc = c.syn.userBankNames(names);
 	if (rc <= 0) {
-		c.ui.toast(rc == 0 ? "SAVE VOICE - NOT IN THIS BUILD" : "USER BANK FILE UNREADABLE");
+		c.ui.toastError(rc == 0 ? "SAVE VOICE - NOT IN THIS BUILD" : "USER BANK FILE UNREADABLE");
 		return false;
 	}
 	SoundHub& h = SoundHub::get();
