@@ -376,7 +376,7 @@ public:
 
 	const char* const* keyLabels(Ctx&, int) override
 	{
-		static const char* const l[4] = { "VOICES", "", "", "LOAD (c)" };
+		static const char* const l[4] = { "VOICES", "", "", "LOAD (11)" };
 		return l;
 	}
 
@@ -495,7 +495,7 @@ public:
 
 	const char* const* keyLabels(Ctx&, int) override
 	{
-		static const char* const l[4] = { "", "", "", "EXIT (v)" };
+		static const char* const l[4] = { "", "", "", "EXIT (12)" };
 		return l;
 	}
 
@@ -559,7 +559,7 @@ private:
 			g.fillRect(x, y, kw, kh, BG);
 			g.roundRect((float)x, (float)y, (float)kw, (float)kh, 6, on ? c.accent : PANEL, (root && !on) ? dim(c.accent, 153) : Gfx::NoColor, 1.f);
 			g.textAligned(x, y + 8, kw, k.keyLabel(i), fHead, on ? INK : WHITE, AL_CENTER);
-			char cap[2] = { "qwerasdf"[i], 0 };
+			char cap[2] = { (char)('1' + i), 0 };
 			g.text(x + 6, y + 4, cap, fLbl, on ? INK : DIM);
 		}
 	}

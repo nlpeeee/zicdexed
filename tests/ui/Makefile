@@ -15,7 +15,7 @@ ui_test: ui_test.cpp $(SRCS) $(wildcard ../../src/ui/*.h) ../../tools/sim/fakesy
 	$(CXX) $(CXXFLAGS) ui_test.cpp $(SRCS) -o $@
 
 shots: ../../tools/sim/sim.cpp $(SRCS)
-	$(CXX) -std=c++14 -O1 -I../../src/ui -I../../tools/sim ../../tools/sim/sim.cpp $(SRCS) -o sim
+	$(CXX) -std=c++14 -O1 -I../../src/ui -I../../src/logic -I../../tools/sim ../../tools/sim/sim.cpp $(SRCS) -o sim
 	./sim shots && python3 ../../tools/sim/ppm2png.py shots
 
 clean:

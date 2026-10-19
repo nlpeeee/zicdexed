@@ -10,7 +10,7 @@ The 4 encoders sit **above** the screen and the 12 keys sit **below** it. So the
 |---|---|---|
 | Encoder lanes | top 44 px | One lane per knob, directly under it: label, big value, value bar (bipolar ones grow from the centre). Turning a knob lights its lane up solid for a moment, which is the "you touched this" feedback |
 | Picture | middle ~106 px | Each page's hero visual: voice name with a live scope, algorithm, operators, envelope, LFO, mixer strips |
-| Key labels | bottom 16 px | Labels for the top key row (q w e r), the row nearest the screen. Dots show sub-pages |
+| Key labels | bottom 16 px | Labels for the top key row (keys 1-4), the row nearest the screen. Dots show sub-pages |
 
 ## 2. Colour and type
 
@@ -21,17 +21,19 @@ The 4 encoders sit **above** the screen and the 12 keys sit **below** it. So the
 ## 3. Key map
 
 ```
- q VOICE    w FM       e OPS       r MOD        ← direct page keys; press again for sub-page
- a < TG     s TG >     d BROWSE    f MIX
- z SHIFT    x PLAY     c COMPARE   v EXIT
+ 1 VOICE    2 FM       3 OPS       4 MOD        ← direct page keys; press again for sub-page
+ 5 < TG     6 TG >     7 BROWSE    8 MIX
+ 9 SHIFT    10 PLAY    11 COMPARE  12 EXIT
+
+Keys are numbered 1-12, top left to bottom right.
 ```
 
 **With Shift held,** the screen turns into a live map of these (mockup 09):
 
 ```
- q INIT     w MUTATE   e OP MUTE   r FX
- a TG MUTE  s TG SOLO  d SAVE VCE  f SAVE PRF
- z (held)   x KEYS     c REVERT    v MENU
+ 1 INIT     2 MUTATE   3 OP MUTE   4 FX
+ 5 TG MUTE  6 TG SOLO  7 SAVE VCE  8 SAVE PRF
+ 9 (held)   10 KEYS    11 REVERT   12 MENU
 ```
 
 - **Page keys** jump straight to a page, so there's no cycling. Pressing a page key again moves through its sub-pages:
@@ -44,7 +46,7 @@ The 4 encoders sit **above** the screen and the 12 keys sit **below** it. So the
 - **INIT:** loads a basic starting voice.
 - **Shift + encoder:** fine steps.
 - **Fast turns** accelerate. That matters for the DX7's 0-99 ranges on encoders with no push switch.
-- **Long-press v:** panic (all notes off).
+- **Long-press key 12:** panic (all notes off).
 
 ## 4. Pages (mockups 01-09)
 
@@ -55,8 +57,8 @@ The 4 encoders sit **above** the screen and the 12 keys sit **below** it. So the
 | 03 OPS | Op, Level, Ratio, Detune | 6 operator cards: ratio, level bar, carriers marked OUT, selected card outlined |
 | 04 OPS → envelope | Rate 1-4 (Shift: Level 1-4) | The selected operator's envelope drawn live |
 | 05 MOD | Wave, Speed, Pitch depth, Amp depth | LFO waveform with a moving phase line. Sub-pages: pitch EG, then FX (reverb, compressor, GRIT later) |
-| 06 MIX | TG, Volume, Pan, Reverb | 8 channel strips in their TG colours, with live level ticks and mute state. q/w mute/solo here |
-| 07 BROWSE | Voice, Bank, Target TG, Volume | List. Turning the knob previews each voice live. c loads, v cancels |
+| 06 MIX | TG, Volume, Pan, Reverb | 8 channel strips in their TG colours, with live level ticks and mute state. keys 1/2 mute/solo here |
+| 07 BROWSE | Voice, Bank, Target TG, Volume | List. Turning the knob previews each voice live. key 11 loads, key 12 cancels |
 | 08 KEYS | Octave, Scale, Root, Velocity | The 8 upper keys become a playable scale |
 | 09 SHIFT | (encoders give fine steps) | Key map of the Shift functions |
 
@@ -81,5 +83,5 @@ Unchanged from v1:
 1. **Hardware:** all 12 keys and all 4 encoders with acceleration.
 2. **UI framework:** lanes, key-label band, the VOICE and MIX pages, and COMPARE/PLAY. This is the first flashable build.
 3. **Sound-design pages:** FM, OPS and envelope, plus the macros and MUTATE.
-4. **BROWSE, KEYS and the Shift map.** The stock menu stays as a fallback under Shift+v.
+4. **BROWSE, KEYS and the Shift map.** The stock menu stays as a fallback under Shift+key 12.
 5. **MOD page,** then the optional GRIT effect.

@@ -21,7 +21,6 @@ static const KeyDef kKeyDefs[kKeyCount] = {
 	{ "TG MUTE", "< tg" },   { "TG SOLO", "tg >" },    { "SAVE VCE", "browse" }, { "SAVE PRF", "mix" },
 	{ "SHIFT", "shift" },    { "KEYS", "play" },       { "REVERT", "compare" }, { "MENU", "exit" },
 };
-static const char kKeyCaps[] = "qwerasdfzxcv";
 
 static void upper(char* dst, const char* src, int n)
 {
@@ -237,7 +236,8 @@ void Ui::drawMap()
 			int k = r * 4 + c, x = 4 + c * (kw + 2), y = 30 + r * 44;
 			bool held = k == K_Z;
 			g_.roundRect((float)x, (float)y, (float)kw, (float)kh, 5, held ? accent() : PANEL);
-			char cap[2] = { kKeyCaps[k], 0 };
+			char cap[3] = { 0, 0, 0 };                       // keys are numbered 1..12, top left to bottom right
+			if (k + 1 >= 10) { cap[0] = '1'; cap[1] = (char)('0' + (k + 1 - 10)); } else cap[0] = (char)('0' + k + 1);
 			g_.text(x + 6, y + 3, cap, fLbl, held ? INK : DIM);
 			g_.textAligned(x, y + 11, kw, kKeyDefs[k].shifted, fBody, held ? INK : WHITE, AL_CENTER);
 			g_.textAligned(x, y + 25, kw, kKeyDefs[k].normal, fTiny, held ? INK : GREY, AL_CENTER);

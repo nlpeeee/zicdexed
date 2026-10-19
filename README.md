@@ -2,11 +2,11 @@
 
 MiniDexed (8 x DX7 FM synth, bare metal) for the **ZicPixel** hardware. It uses the 320x170 screen, all 4 encoders and all 12 keys, with a control layout taken from zicBox.
 
-Hardware: Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS, SPI mode 3), PCM5102 I2S DAC, 4 encoders without push (26/13, 6/5, 0/9, 27/4), 12 keys q20 w16 e25 r14 / a12 s1 d24 f15 / z7 x8 c23 v22 (active low).
+Hardware: Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS, SPI mode 3), PCM5102 I2S DAC, 4 encoders without push (26/13, 6/5, 0/9, 27/4), 12 keys, numbered 1-12 from top left to bottom right, on GPIO 20 16 25 14 / 12 1 24 15 / 7 8 23 22 (active low).
 
 ## Status
 
-First flashable build of the new UI: the screen framework (lanes, key band, per-TG colour, Shift key map), all 12 keys and 4 encoders with acceleration, the VOICE and MIX pages, PLAY and COMPARE, and the stock menu under Shift+v. FM, OPS, MOD, BROWSE and KEYS are the next pages and show a "not in this build" toast. The design is in [docs/ui-design.md](docs/ui-design.md), how it is built is in [docs/firmware-ui.md](docs/firmware-ui.md).
+First flashable build of the new UI: the screen framework (lanes, key band, per-TG colour, Shift key map), all 12 keys and 4 encoders with acceleration, the VOICE and MIX pages, PLAY and COMPARE, and the stock menu under Shift+key 12. FM, OPS (with envelopes), MOD (LFO, pitch EG, FX), BROWSE and KEYS pages, INIT, MUTATE, OP MUTE, SAVE VOICE and SAVE PERFORMANCE are on the sound-design branch. The design is in [docs/ui-design.md](docs/ui-design.md), how it is built is in [docs/firmware-ui.md](docs/firmware-ui.md).
 
 ![simulated screens](docs/screens/simulated_contact_sheet.png)
 
