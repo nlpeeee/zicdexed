@@ -381,8 +381,11 @@ public:
 	{
 		// key 3 opens the naming screen: it renames in place in the user bank, and
 		// saves a renamed copy into it from any other bank
-		static const char* const own[4] = { "VOICES", "", "RENAME", "LOAD (11)" };
-		static const char* const other[4] = { "VOICES", "", "SAVE AS", "LOAD (11)" };
+		// key 2 switches between browsing voices and performances
+		static const char* const own[4] = { "VOICE", "PERFS", "RENAME", "LOAD (11)" };
+		static const char* const other[4] = { "VOICE", "PERFS", "SAVE AS", "LOAD (11)" };
+		static const char* const perf[4] = { "VOICE", "VOICES", "", "LOAD (11)" };
+		if (perf_) return perf;
 		return hub().browse().active() && hub().browse().bank() == kUserBankId ? own : other;
 	}
 
@@ -394,7 +397,23 @@ public:
 		hub().ui().tg = c.tg;
 	}
 
-	void leave(Ctx& c, int) override { cancel(c); }
+	void leave(Ctx& c, int) override { perf_ = false; cancel(c); }
+
+	void lane(Ctx& c, int sub, int i, LaneView& out) override
+	{
+		if (!perf_) { LogicPage::lane(c, sub, i, out); return; }
+		out.bipolar = false;
+		out.label[0] = out.text[0] = 0;
+		out.frac = 0;
+		if (i == 0) {
+			copyStr(out.label, "Perf", sizeof out.label);
+			fmtInt(out.text, perfN_ ? perfIds_[perfSel_] + 1 : 0);
+			out.frac = frac(perfSel_, 0, perfN_ > 1 ? perfN_ - 1 : 1);
+		} else if (i == 1) {
+			copyStr(out.label, "Count", sizeof out.label);
+			fmtInt(out.text, perfN_);
+		}
+	}
 
 	// Lanes of this page always address the browse target TG.
 	void prepare(Ctx& c, int sub) override
@@ -405,6 +424,13 @@ public:
 
 	bool turn(Ctx& c, int sub, int i, int steps, bool fine) override
 	{
+		if (perf_) {                                    // only the first encoder moves through the list
+			if (i != 0 || !perfN_) return false;
+			perfSel_ += steps;
+			if (perfSel_ < 0) perfSel_ = 0;
+			if (perfSel_ > perfN_ - 1) perfSel_ = perfN_ - 1;
+			return true;
+		}
 		prepare(c, sub);
 		zd::BrowseModel& b = hub().browse();
 		if (!b.active()) return false;
@@ -423,6 +449,26 @@ public:
 	bool key(Ctx& c, int, int k, bool down) override
 	{
 		if (!down) return false;
+		if (k == K_W) {                                 // voices <-> performances
+			if (perf_) { perf_ = false; enter(c, 0); }
+			else if (!enterPerf(c)) return true;
+			c.ui.redrawAll();
+			return true;
+		}
+		if (perf_) {
+			if (k == K_C) {                             // LOAD the selected performance
+				if (!perfN_) return true;
+				const int id = perfIds_[perfSel_];
+				if (!c.syn.loadPerformance(id)) { c.ui.toast("PERFORMANCE NOT LOADED"); return true; }
+				for (int t = 0; t < kMaxTG; t++) hub().forget(t);   // every TG gets a new voice
+				c.ui.toast("PERFORMANCE LOADING");
+				perf_ = false;
+				c.ui.gotoSlot(SLOT_VOICE);
+				return true;
+			}
+			if (k == K_E) return true;                  // nothing to rename here
+			return false;
+		}
 		if (k == K_E) {                                 // RENAME / SAVE AS: keep the voice, then name it
 			zd::BrowseModel& b = hub().browse();
 			if (!b.active()) return true;
@@ -457,6 +503,7 @@ public:
 
 	void draw(Ctx& c, int) override
 	{
+		if (perf_) { drawPerfs(c); return; }
 		hub().bind(c);
 		zd::BrowseModel& b = hub().browse();
 		Gfx& g = c.g;
@@ -480,6 +527,52 @@ public:
 private:
 	uint32_t savedMask_ = 0;
 	uint8_t saved_[kMaxTG][kVoiceSize];
+
+	// performance browsing: the valid ids of the card's performance folder
+	static constexpr int kMaxPerf = 128;
+	bool perf_ = false;
+	int perfIds_[kMaxPerf];
+	int perfN_ = 0, perfSel_ = 0;
+
+	bool enterPerf(Ctx& c)
+	{
+		const int last = c.syn.performanceLast();
+		if (last < 0) { c.ui.toast("PERFORMANCES - NOT IN THIS BUILD"); return false; }
+		cancel(c);                                      // undo any voice preview first
+		perfN_ = 0;
+		perfSel_ = 0;
+		const int cur = c.syn.performanceCurrent();
+		for (int id = 0; id <= last && id < kMaxPerf; id++) {
+			if (!c.syn.performanceValid(id)) continue;
+			if (id == cur) perfSel_ = perfN_;
+			perfIds_[perfN_++] = id;
+		}
+		perf_ = true;
+		return true;
+	}
+
+	void drawPerfs(Ctx& c)
+	{
+		Gfx& g = c.g;
+		if (!perfN_) { g.text(8, kListTop + 4, "NO PERFORMANCES ON THE CARD", fBody, GREY); return; }
+		const int cur = c.syn.performanceCurrent();
+		int first = perfSel_ - kRows / 2;
+		if (first > perfN_ - kRows) first = perfN_ - kRows;
+		if (first < 0) first = 0;
+		for (int r = 0; r < kRows && first + r < perfN_; r++) {
+			const int idx = first + r, id = perfIds_[idx], y = kListTop + r * kRowH;
+			const bool sel = idx == perfSel_;
+			if (sel) g.roundRect(2, (float)y, 316, (float)kRowH, 3, c.accent);
+			char num[6];
+			fmtInt(num, id + 1);
+			g.text(8, y + 2, num, fSmall, sel ? INK : DIM);
+			char nm[32];
+			c.syn.performanceName(id, nm);
+			const int dist = idx > perfSel_ ? idx - perfSel_ : perfSel_ - idx;
+			g.text(38, y + 1, nm, fBody, sel ? INK : (dist == 1 ? WHITE : GREY));
+			if (id == cur) g.textAligned(200, y + 2, 110, "loaded", fSmall, sel ? INK : c.accent, AL_RIGHT);
+		}
+	}
 
 	void audition(Ctx& c)
 	{

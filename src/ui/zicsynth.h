@@ -96,6 +96,16 @@ public:
 	// for -1. Returns the slot, or -1 not supported, -2 bank full, -3 file error.
 	virtual int saveVoiceTo(const uint8_t /*v*/[kVoiceSize], int /*slot*/) { return -1; }
 
+	// Performances (the 8-TG sets in the card's performance folder), for BROWSE.
+	// performanceLast() is the highest id or -1 when not supported; ids in between
+	// may be empty (performanceValid). loadPerformance() only queues the load: the
+	// synth does it a moment later and every TG's voice changes.
+	virtual int performanceLast() { return -1; }
+	virtual bool performanceValid(int /*id*/) { return false; }
+	virtual void performanceName(int /*id*/, char out[32]) { out[0] = 0; }
+	virtual int performanceCurrent() { return -1; }
+	virtual bool loadPerformance(int /*id*/) { return false; }
+
 	// Mute is a gain stage in front of the TG, independent of the volume lane.
 	virtual void setMute(int tg, bool muted) = 0;
 

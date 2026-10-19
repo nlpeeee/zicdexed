@@ -164,6 +164,18 @@ public:
 		return true;
 	}
 
+	int performanceLast () override { return (int) m_pMini->GetLastPerformance (); }
+	bool performanceValid (int id) override { return id >= 0 && m_pMini->IsValidPerformance ((unsigned) id); }
+	void performanceName (int id, char out[32]) override
+	{
+		std::string s = m_pMini->GetPerformanceName ((unsigned) id);
+		unsigned n = 0;
+		for (; n < s.size () && n < 31; n++) out[n] = (s[n] >= 32 && s[n] < 127) ? s[n] : ' ';
+		out[n] = 0;
+	}
+	int performanceCurrent () override { return (int) m_pMini->GetActualPerformanceID (); }
+	bool loadPerformance (int id) override { return m_pMini->SetNewPerformance ((unsigned) id); }
+
 	bool savePerformance () override { return m_pMini->SavePerformance (false); }
 	int saveVoice (const uint8_t v[kVoiceSize]) override { return SaveVoiceToUserBank (v); }
 	int saveVoiceTo (const uint8_t v[kVoiceSize], int slot) override { return SaveVoiceToUserSlot (v, slot); }

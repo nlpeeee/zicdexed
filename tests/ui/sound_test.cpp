@@ -256,6 +256,37 @@ int main()
 		r.press(K_E);
 		CHECK(r.syn.lastUserSlot == 0 && r.syn.userSaves == 2);
 	}
+	{	// BROWSE key 2: performances instead of voices; key 11 loads the selected one
+		Rig r;
+		r.press(K_D);
+		r.press(K_W);
+		CHECK(r.ui.slot() == SLOT_BROWSE);           // key 2 did not jump to FM
+		r.turn(0, 1);                                // current is id 0, so this is id 1
+		r.turn(0, 1);                                // ids 2 does not exist: id 3
+		r.turn(0, 100);                              // clamps at the last one (id 7)
+		r.turn(0, -1);                               // back to id 4
+		r.turn(1, 5);                                // other encoders do nothing here
+		CHECK(r.syn.perfLoads == 0 && r.syn.loads == 0);
+		r.press(K_E);                                // key 3 has nothing to do in this list
+		CHECK(r.ui.slot() == SLOT_BROWSE);
+		r.press(K_V);                                // keys 12 is exit as always (nothing loaded)
+		CHECK(r.syn.perfLoads == 0);
+		r.press(K_D); r.press(K_W);
+		r.turn(0, 2);                                // id 3
+		r.press(K_W);                                // key 2 again: back to voices
+		CHECK(r.ui.slot() == SLOT_BROWSE);
+		r.turn(0, 1);                                // previews a voice again
+		CHECK(r.syn.loads == 1);
+		r.press(K_W);                                // and into performances once more: the preview is undone
+		CHECK(r.syn.loads == 2);
+		r.turn(0, 1);
+		r.press(K_C);                                // key 11
+		CHECK(r.syn.perfLoads == 1 && r.syn.lastPerfLoaded == 1);
+		CHECK(r.ui.slot() == SLOT_VOICE);
+		r.press(K_D); r.press(K_W);                  // the list starts on the performance now loaded
+		r.press(K_C);
+		CHECK(r.syn.lastPerfLoaded == 1);
+	}
 	{	// Shift+r with the Shift map showing (held past 250 ms), from several starting pages
 		for (int start = 0; start < 4; start++) {
 			Rig r;

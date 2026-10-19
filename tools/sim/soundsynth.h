@@ -78,6 +78,13 @@ struct SoundSynth : FakeSynth {
 		userSaves++; lastUserSlot = slot;
 		return slot;
 	}
+	// performances 1, 2, 4, 5 and 8 exist (ids 0, 1, 3, 4, 7)
+	int perfCurrent = 0, perfLoads = 0, lastPerfLoaded = -1;
+	int performanceLast() override { return 7; }
+	bool performanceValid(int id) override { return id == 0 || id == 1 || id == 3 || id == 4 || id == 7; }
+	void performanceName(int id, char out[32]) override { snprintf(out, 32, id == 0 ? "Default" : "Perf %d", id + 1); }
+	int performanceCurrent() override { return perfCurrent; }
+	bool loadPerformance(int id) override { perfLoads++; lastPerfLoaded = id; perfCurrent = id; return true; }
 	int getFx(FxParam p) override { return fx[p]; }
 	int bankCount() override { return 99; }
 	bool bankValid(int b) override { return (b >= 0 && b < 4 && b != 2) || b == 98; }
