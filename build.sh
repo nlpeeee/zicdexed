@@ -65,7 +65,7 @@ fi
 # an empty performance folder: Shift+f (SAVE PERFORMANCE) is refused without it on the card
 rm -rf "$OUT"; mkdir -p "$OUT" "$OUT"/performance
 cp src/kernel8.img "$OUT"/
-cp "$ROOT"/config/minidexed.ini "$OUT"/
+cp "$ROOT"/config/minidexed.ini "$ROOT"/config/performance.ini "$OUT"/
 cp -r "$ROOT"/sysex "$OUT"/
 
 # WiFi: Pi Zero 2 W firmware blobs (downloaded by Circle's own Makefile) and a

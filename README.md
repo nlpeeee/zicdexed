@@ -82,7 +82,7 @@ Needs the Arm GNU toolchain 13.3.rel1 `aarch64-none-elf` on `PATH`, then `./buil
 ## SD card
 
 1. Format the card as FAT32 and copy a MiniDexed release onto it.
-2. Copy `kernel8.img` and `minidexed.ini` from `out/` onto the card root. This replaces the two files with the same name, which is what you want.
+2. Copy `kernel8.img` and `minidexed.ini` from `out/` onto the card root. This replaces the two files with the same name, which is what you want. Also copy `performance.ini`, the default performance loaded at power-on (TG 1 on nasty voice 1, OMNI, TGs 2-8 off), but **only if the card has none**: it is overwritten by SAVE PERFORMANCE as default, so don't clobber a performance you saved.
 3. **Merge** `out/sysex/voice/` into the card's `sysex/voice/`. Never replace the folder: the stock banks live there. MiniDexed numbers banks from the 6-digit prefix of the file name, so a file with the same number as a stock bank hides it. The nasty bank uses 000090 for that reason, and SAVE VOICE writes bank 99.
 4. If the stock banks have been lost or overwritten, rebuild them from your Dexed cartridge collection: `python3 tools/stock_banks.py <Dexed cart folder> <out folder>` writes 000001-000027 with themed names (Yamaha ROM3/ROM4 and VRC-101 to VRC-112). Copy them into `sysex/voice/`. The Yamaha banks are not stored in this repo.
 5. Copy the empty `performance` folder from `out/` to the card root. SAVE PERFORMANCE needs it.
