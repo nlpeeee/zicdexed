@@ -12,7 +12,7 @@ The Pi Zero 2 W has onboard WiFi (2.4 GHz). MiniDexed brings it up at boot and t
 1. Run `./build.sh`. It downloads the WiFi firmware into `out/firmware/` (set `WIFI_FIRMWARE=0` to skip, for example when offline).
 2. Copy `out/firmware/` to the card as `firmware/`.
 3. Copy `out/wpa_supplicant.conf.example` to the card as `wpa_supplicant.conf` and set your `country`, `ssid` and `psk`. Keep the file to `country=` and the `network={}` block: Circle's supplicant is a cut-down build, and options such as `ctrl_interface` or `update_config` make it reject the whole file, leaving WiFi stuck at "joining AP".
-4. Boot. If the firmware or `wpa_supplicant.conf` is missing, the log shows `Failed to initialize WLAN, maybe firmware files are missing?` and the synth runs without network.
+4. Boot. If the firmware or `wpa_supplicant.conf` is missing, the log shows `Failed to initialize WLAN, maybe firmware files are missing?` and the synth runs without network. On the hardware, a card with `NetworkEnabled=1` but no `firmware` folder stopped at the first screen (Neil's build 3), so set `NetworkEnabled=0` in `minidexed.ini` until the firmware is on the card. The Shift screen shows why WiFi is not up: no chip, no `wpa_supplicant.conf`, joining the access point, waiting for DHCP, or the IP address.
 
 Add `NetworkSyslogEnabled=1` and `NetworkSyslogServerIPAddress=<your PC>` in the ini to watch the boot log with `syslogserver.py` from MiniDexed when something does not connect.
 
