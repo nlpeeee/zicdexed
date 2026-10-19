@@ -439,6 +439,7 @@ int main()
 		CHECK(r.syn.perfLoads == 1);
 		r.run(3500);
 		CHECK(r.ui.toastShown());
+		r.press(K_V);                                // leave (the page keeps its state between rigs)
 	}
 	{	// the synth takes a moment to switch banks: key 11 waits for the new list
 		Rig r;
@@ -446,7 +447,7 @@ int main()
 		r.press(K_D); r.press(K_W);
 		r.turn(1, 1);
 		r.press(K_C);                                // too early: ignored
-		CHECK(r.syn.perfLoads == 0 && r.ui.slot() == SLOT_BROWSE);
+		CHECK(r.syn.perfLoads == 0); CHECK(r.ui.slot() == SLOT_BROWSE);
 		r.run(400);                                  // the page polls and builds the list
 		r.press(K_C);
 		CHECK(r.syn.perfLoads == 1 && r.syn.lastPerfLoaded == 0 && r.syn.perfBankHome == 1);
