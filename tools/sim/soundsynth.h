@@ -88,6 +88,7 @@ struct SoundSynth : FakeSynth {
 	// Three performance banks (ids 0, 1 and 3; bank 2 is missing). Bank 0 holds
 	// performances 1, 2, 4, 5 and 8 (ids 0, 1, 3, 4, 7), bank 1 holds ids 0 and 2, bank 3 just id 5.
 	int perfCurrent = 0, perfLoads = 0, lastPerfLoaded = -1, perfBank = 0, perfBankHome = 0, perfBankSwitches = 0;
+	bool perfIgnore = false;         // true: loadPerformance() is accepted but never takes effect
 	int perfBankDelay = 0;           // >0: the switch only completes after this many performanceBank() calls
 	int pendingBank = -1;
 	static bool inBank(int bank, int id)
@@ -101,7 +102,7 @@ struct SoundSynth : FakeSynth {
 	bool performanceValid(int id) override { return inBank(perfBank, id); }
 	void performanceName(int id, char out[32]) override { snprintf(out, 32, "B%d Perf %d", perfBank + 1, id + 1); }
 	int performanceCurrent() override { return perfCurrent; }
-	bool loadPerformance(int id) override { perfLoads++; lastPerfLoaded = id; perfCurrent = id; perfBankHome = perfBank; return true; }
+	bool loadPerformance(int id) override { perfLoads++; lastPerfLoaded = id; if (!perfIgnore) perfCurrent = id; perfBankHome = perfBank; return true; }
 	int performanceBankCount() override { return 4; }
 	bool performanceBankValid(int b) override { return b == 0 || b == 1 || b == 3; }
 	void performanceBankName(int b, char out[32]) override { snprintf(out, 32, b == 0 ? "Seed" : (b == 1 ? "Acid" : "Keys")); }

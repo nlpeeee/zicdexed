@@ -430,6 +430,16 @@ int main()
 		r.press(K_V);
 		CHECK(r.syn.perfLoads == loads);             // the kept one is now the loaded one
 	}
+	{	// a preview the synth never reports is flagged, and the loaded performance stays the marked one
+		Rig r;
+		r.syn.perfIgnore = true;
+		r.press(K_D); r.press(K_W);
+		r.turn(0, 1);
+		r.run(600);
+		CHECK(r.syn.perfLoads == 1);
+		r.run(3500);
+		CHECK(r.ui.toastShown());
+	}
 	{	// the synth takes a moment to switch banks: key 11 waits for the new list
 		Rig r;
 		r.syn.perfBankDelay = 3;

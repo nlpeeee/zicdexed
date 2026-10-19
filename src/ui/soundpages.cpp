@@ -409,6 +409,7 @@ public:
 	void tick(Ctx& c, int) override
 	{
 		if (perf_ && !perfPending_ && perfWait_ > 0 && --perfWait_ == 0) previewPerf(c);
+		if (perf_ && perfConfirm_ > 0) confirmPreview(c);
 		if (perf_ && perfPending_ && c.syn.performanceBank() == perfBank_) {   // the synth has re-read the bank's folder
 			perfPending_ = false;
 			buildPerfList(c, false);
@@ -576,6 +577,8 @@ private:
 	bool perfPending_ = false;
 	static constexpr int kPreviewTicks = 12;   // ~0.5 s of rest before a performance sounds
 	int perfWait_ = 0;
+	static constexpr int kConfirmTicks = 75;   // ~3 s for the synth to report the new performance
+	int perfConfirm_ = 0;
 	int perfSoundBank_ = 0, perfSoundId_ = 0;   // the performance sounding now (the loaded one or a preview)       // waiting for the synth to switch to perfBank_
 
 	bool enterPerf(Ctx& c)
@@ -588,6 +591,7 @@ private:
 		perfSoundBank_ = perfHome_;
 		perfSoundId_ = perfHomeId_;
 		perfWait_ = 0;
+		perfConfirm_ = 0;
 		perfPending_ = false;
 		buildPerfList(c, true);
 		perf_ = true;
@@ -604,6 +608,7 @@ private:
 			for (int t = 0; t < kMaxTG; t++) hub().forget(t);
 		}
 		perfWait_ = 0;
+		perfConfirm_ = 0;
 		perf_ = false;
 		perfPending_ = false;
 	}
@@ -630,7 +635,28 @@ private:
 		if (!c.syn.loadPerformance(id)) return;
 		perfSoundBank_ = perfBank_;
 		perfSoundId_ = id;
+		perfConfirm_ = kConfirmTicks;
 		c.ui.redrawPicture();
+	}
+
+	// The synth loads asynchronously: say when the preview is in, or that it never arrived.
+	void confirmPreview(Ctx& c)
+	{
+		if (c.syn.performanceCurrent() == perfSoundId_) {
+			perfConfirm_ = 0;
+			char nm[32];
+			c.syn.performanceName(perfSoundId_, nm);
+			char msg[48] = "PREVIEW: ";
+			unsigned n = 9;
+			for (const char* p = nm; *p && n < sizeof msg - 1; p++) msg[n++] = *p;
+			msg[n] = 0;
+			c.ui.toast(msg);
+		} else if (--perfConfirm_ == 0) {
+			perfSoundBank_ = perfHome_;                 // nothing changed: the loaded one is still sounding
+			perfSoundId_ = perfHomeId_;
+			c.ui.toastError("PREVIEW DID NOT LOAD");
+			c.ui.redrawPicture();
+		}
 	}
 
 	bool stepBank(Ctx& c, int dir)
