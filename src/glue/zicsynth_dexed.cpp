@@ -182,6 +182,9 @@ public:
 	int resetUserBank () override { return ResetUserBank (); }
 	int userBankNames (char names[32][kNameLen + 1]) override { return ReadUserBankNames (names) ? 1 : -3; }
 
+	int masterVolume () override { return m_pMini->GetMasterVolume127 (); }
+	void setMasterVolume (int v) override { m_pMini->setMasterVolume ((float) (v < 0 ? 0 : (v > 127 ? 127 : v)) / 127.0f); }
+
 	void setMute (int tg, bool muted) override { m_pMini->SetExpression (muted ? 0 : 127, tg); }
 
 	float level (int tg) override

@@ -18,6 +18,8 @@ struct FakeSynth : ISynth {
 	double phase = 0;
 	int log_notes = 0, compares = 0, reverts = 0, panics = 0;
 	int fx[kFxParamCount] = {};
+	int master = 100;
+	int muteCalls = 0;
 
 	FakeSynth()
 	{
@@ -63,7 +65,9 @@ struct FakeSynth : ISynth {
 	bool bankValid(int) override { return true; }
 	bool voiceNameIn(int, int, char*) override { return false; }
 	bool readVoiceIn(int, int, uint8_t*) override { return false; }
-	void setMute(int tg, bool m) override { muted[tg] = m; }
+	int masterVolume() override { return master; }
+	void setMasterVolume(int v) override { master = v < 0 ? 0 : (v > 127 ? 127 : v); }
+	void setMute(int tg, bool m) override { muted[tg] = m; muteCalls++; }
 	float level(int tg) override { float l = lvl[tg]; return l; }
 	void netStatus(char out[32]) override { strcpy(out, "WiFi 192.168.1.42"); }
 	void setScopeTG(int tg) override { scopeTG = tg; }

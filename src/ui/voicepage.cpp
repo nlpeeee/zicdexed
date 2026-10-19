@@ -63,7 +63,7 @@ public:
 		int v = c.syn.get(d.param, c.tg);
 		if (d.kind == LK_MONO || d.kind == LK_PORTA_MODE) v = steps > 0 ? 1 : 0;
 		else if (d.kind == LK_PROGRAM) v += steps > 0 ? 1 : -1;      // one voice per click
-		else v += steps;
+		else v += d.param == P_VOLUME ? volumeSteps(steps) : steps;
 		const ParamRange& r = paramRange(d.param);
 		if (v < r.min) v = r.min;
 		if (v > r.max) v = r.max;

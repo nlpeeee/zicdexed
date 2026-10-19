@@ -53,6 +53,9 @@ public:
 	float meter(int tg) const { return meter_[tg]; }
 	bool playing(int tg) const { return meter_[tg] > 0.02f; }
 	void toast(const char* text, uint32_t ms = 1400);
+	// Something went wrong: stays on screen until the next key press.
+	void toastError(const char* text);
+	bool toastShown() const { return toastOn_; }
 
 	Ctx ctx() { return Ctx{g_, syn_, *this, tg_, accent(), shift_, now_}; }
 	Slot slot() const { return slot_; }
@@ -76,6 +79,7 @@ private:
 	void normalKey(int key);
 	void shiftKey(int key);
 	void applyMutes();
+	void reassertMutes();
 	void showToast();
 	void clearToast();
 
@@ -99,6 +103,8 @@ private:
 	char toast_[32];
 	uint32_t toastUntil_;
 	bool toastOn_;
+	bool toastKeep_;
+	uint32_t lastMuteMs_;
 
 	bool muted_[kMaxTG], solo_[kMaxTG];
 	float level_[kMaxTG], meter_[kMaxTG];

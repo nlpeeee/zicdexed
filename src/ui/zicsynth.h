@@ -109,6 +109,10 @@ public:
 	virtual int performanceCurrent() { return -1; }
 	virtual bool loadPerformance(int /*id*/) { return false; }
 
+	// Master output volume, 0..127 (the stock menu's Master Volume).
+	virtual int masterVolume() { return 100; }
+	virtual void setMasterVolume(int /*v*/) {}
+
 	// Mute is a gain stage in front of the TG, independent of the volume lane.
 	virtual void setMute(int tg, bool muted) = 0;
 

@@ -37,7 +37,8 @@ The screens in [ui-design.md](ui-design.md) run as real code. This page is for w
 | Encoders | 1..4 on GPIO `26/13, 6/5, 0/9, 27/4`, interrupt driven. Turn speed sets the step: under 12 ms per click x6, under 25 ms x3, under 60 ms x2, else x1 |
 | Direction | `ZicEncoderInvert` in `minidexed.ini`: bit n reverses encoder n+1 |
 
-Keys: 1 VOICE (press again for sub-pages), 2 FM, 3 OPS, 4 MOD, 5/6 TG-/TG+, 7 BROWSE, 8 MIX, 9 SHIFT (hold 0.25 s shows the key map), 10 PLAY (hold), 11 COMPARE (hold), 12 EXIT home (hold 0.7 s = panic). With Shift: 1 INIT, 2 MUTATE, 3 OP MUTE, 4 FX, 5 TG mute, 6 TG solo, 7 SAVE VOICE, 8 SAVE PERFORMANCE, 10 KEYS pads, 11 revert, 12 stock menu.
+Keys: 1 VOICE (press again for sub-pages), 2 FM, 3 OPS, 4 MOD, 5/6 TG-/TG+, 7 BROWSE, 8 MIX (press again for the MASTER volume lane), 9 SHIFT (hold 0.25 s shows the key map), 10 PLAY (hold), 11 COMPARE (hold), 12 EXIT home (hold 0.7 s = panic). With Shift: 1 INIT, 2 MUTATE, 3 OP MUTE, 4 FX, 5 TG mute, 6 TG solo, 7 SAVE VOICE, 8 SAVE PERFORMANCE, 10 KEYS pads, 11 revert, 12 stock menu.
+Errors (full user bank, no performance folder, failed load) stay on screen until the next key press; other messages last 1.4 s. Mutes are re-applied about every 0.1 s, so a performance load or a MIDI expression message cannot un-mute a muted TG.
 
 In the stock menu: key 12 select, key 11 back, key 7 home, keys 5/6 program, keys 1/2 TG, keys 3/4 bank, any encoder scrolls, Shift+key 12 returns to the ZicDexed screens.
 

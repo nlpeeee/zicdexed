@@ -468,7 +468,7 @@ public:
 			if (k == K_C) {                             // LOAD the selected performance
 				if (!perfN_) return true;
 				const int id = perfIds_[perfSel_];
-				if (!c.syn.loadPerformance(id)) { c.ui.toast("PERFORMANCE NOT LOADED"); return true; }
+				if (!c.syn.loadPerformance(id)) { c.ui.toastError("PERFORMANCE NOT LOADED"); return true; }
 				for (int t = 0; t < kMaxTG; t++) hub().forget(t);   // every TG gets a new voice
 				c.ui.toast("PERFORMANCE LOADING");
 				perf_ = false;

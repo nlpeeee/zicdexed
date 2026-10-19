@@ -44,7 +44,7 @@ Ui::Ui(Gfx& g, ISynth& syn)
 	: g_(g), syn_(syn), slot_(SLOT_VOICE), prev_(SLOT_VOICE), tg_(0), now_(0),
 	  shift_(false), mapShown_(false), mapHidden_(false), shiftDownMs_(0),
 	  suspended_(false), menuReq_(false),
-	  lastLaneMs_(0), lastTickMs_(0), toastUntil_(0), toastOn_(false),
+	  lastLaneMs_(0), lastTickMs_(0), toastUntil_(0), toastOn_(false), toastKeep_(false), lastMuteMs_(0),
 	  playing_(false), comparing_(false), playTG_(0), playNote_(60), compareTG_(0),
 	  vDownMs_(0), vDown_(false), vFired_(false)
 {
@@ -80,6 +80,16 @@ void Ui::applyMutes()
 {
 	bool solo = anySolo();
 	for (int i = 0; i < syn_.tgCount() && i < kMaxTG; i++) syn_.setMute(i, muted_[i] || (solo && !solo_[i]));
+}
+
+// A performance load or a MIDI expression message (CC 11) can lift a muted TG's gain
+// behind our back, so keep re-asserting it. Only silenced TGs are touched: the
+// others keep whatever expression the MIDI player has set.
+void Ui::reassertMutes()
+{
+	bool solo = anySolo();
+	for (int i = 0; i < syn_.tgCount() && i < kMaxTG; i++)
+		if (muted_[i] || (solo && !solo_[i])) syn_.setMute(i, true);
 }
 
 void Ui::toggleMute(int tg) { muted_[tg] = !muted_[tg]; applyMutes(); }
@@ -251,13 +261,16 @@ void Ui::showToast()
 	g_.textAligned(x, kBandTop + 5, w, t, fLbl, INK, AL_CENTER, 1.f);
 }
 
-void Ui::clearToast() { toastOn_ = false; toastUntil_ = 0; if (!mapShown_) drawFooter(); else g_.fillRect(0, kBandTop, W, H - kBandTop, BG); }
+void Ui::toastError(const char* text) { toast(text, 0); toastKeep_ = true; }
+
+void Ui::clearToast() { toastKeep_ = false; toastOn_ = false; toastUntil_ = 0; if (!mapShown_) drawFooter(); else g_.fillRect(0, kBandTop, W, H - kBandTop, BG); }
 
 void Ui::toast(const char* text, uint32_t ms)
 {
 	strncpy(toast_, text, sizeof toast_ - 1);
 	toast_[sizeof toast_ - 1] = 0;
 	toastOn_ = true;
+	toastKeep_ = false;
 	toastUntil_ = ms ? now_ + ms : 0;
 	if (!suspended_) showToast();
 }
@@ -326,6 +339,8 @@ void Ui::key(int k, bool down, uint32_t nowMs)
 {
 	now_ = nowMs;
 	if (suspended_ || k < 0 || k >= kKeyCount) return;
+
+	if (down && toastKeep_) clearToast();         // an error stays until the next key
 
 	if (k == K_Z) {
 		shift_ = down;
@@ -416,6 +431,7 @@ void Ui::tick(uint32_t nowMs)
 		toast("PANIC - ALL NOTES OFF");
 	}
 	if (toastOn_ && toastUntil_ && (int32_t)(now_ - toastUntil_) >= 0) clearToast();
+	if (now_ - lastMuteMs_ >= 100) { lastMuteMs_ = now_; reassertMutes(); }
 	if (mapShown_) return;
 
 	if (now_ - lastLaneMs_ >= 100) {
