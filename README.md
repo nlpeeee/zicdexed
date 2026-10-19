@@ -58,9 +58,9 @@ Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS, SPI mode 
 
 Use this if you just want to play. You need an SD card (FAT32), a card reader and a PC. No build tools.
 
-**1. Make a card that boots a Pi.** ZicDexed is an overlay on a [MiniDexed release](https://github.com/probonopd/MiniDexed/releases). Format the card as FAT32, then unzip the latest MiniDexed release onto its root. That gives you the Raspberry Pi boot files, the stock `sysex/voice` banks and the stock `performance` folder. Do not copy MiniDexed's own `kernel8.img` or `minidexed.ini`: step 3 replaces them.
+**1. Make a card that boots a Pi.** ZicDexed is an overlay on a [MiniDexed release](https://github.com/probonopd/MiniDexed/releases). Format the card as FAT32, then unzip the latest MiniDexed release onto its root. That gives you the Raspberry Pi boot files (`bootcode.bin`, `start*.elf`, `config.txt` and so on), a `firmware` folder with the WiFi chip firmware, and the stock `performance` folder. It has **no** `sysex/voice` folder: see step 5. Step 3 replaces MiniDexed's own `kernel8.img`, `minidexed.ini` and `performance.ini` with the ZicDexed ones (`kernel8.img` is the build for the Pi Zero 2 W).
 
-**2. Download the ZicDexed card package.** On the [Releases page](https://github.com/nlpeeee/zicdexed/releases) get `ZicDexed_v1_1_card.zip` (or the newest one) and unzip it. Inside is one folder, `ZicDexed_v1_1/`, and what you copy is its **contents**, not the folder itself.
+**2. Download the ZicDexed card package.** On the [Releases page](https://github.com/nlpeeee/zicdexed/releases) get the newest `ZicDexed_*_card.zip` and unzip it. Inside is one folder, `ZicDexed_<version>/`, and what you copy is its **contents**, not the folder itself.
 
 **3. Copy it onto the card root.**
 
@@ -75,14 +75,14 @@ The card must end up with a `performance` folder, or Shift+8 (SAVE PERFORMANCE) 
 
 Why merge: MiniDexed numbers banks from the 6-digit start of the file name, so a file with the same number hides the old one. The nasty bank is 000090 on purpose, and SAVE VOICE writes your own voices to bank 99 (`000099_ZICUSER.syx`), which a replaced folder would delete.
 
-**4. Optional: WiFi (FTP updates, AppleMIDI).** The release does not include the WiFi chip firmware.
+**4. Optional: WiFi (FTP updates, AppleMIDI).** If you unzipped the MiniDexed release in step 1, its `firmware` folder is already on the card. The ZicDexed package does not include the WiFi chip firmware, so otherwise:
 1. Get it: run `tools/get-wifi-firmware.ps1` in PowerShell (Windows) or `tools/get-wifi-firmware.sh` (Linux, macOS) from a clone of this repo, or take `out/firmware/` from a source build. Copy the resulting `firmware` folder to the card root.
 2. Copy `wpa_supplicant.conf.example` to `wpa_supplicant.conf` on the card, and set `country`, `ssid` and `psk`. Keep only those lines and the `network={}` block.
 3. No WiFi wanted? Set `NetworkEnabled=0` in `minidexed.ini` on the card. With WiFi on and no `firmware` folder the box can stop at the first screen.
 
 More in [docs/wifi.md](docs/wifi.md).
 
-**5. Factory Yamaha banks.** The Yamaha cartridges are not redistributed here. The MiniDexed release already has its own `sysex/voice` set. If you own the Dexed cartridge collection, `python3 tools/stock_banks.py <Dexed cart folder> <out folder>` writes 27 themed banks, `000001` to `000027`, to merge into `sysex/voice/`. Bank 1 on the box is the firmware's built-in set only while no `000001_*.syx` is on the card.
+**5. Factory Yamaha banks.** The Yamaha cartridges are not redistributed here. The MiniDexed release does not ship `sysex/voice` (its `getsysex.sh` script downloads the Dexed banks); the ZicDexed package adds the nasty bank. If you own the Dexed cartridge collection, `python3 tools/stock_banks.py <Dexed cart folder> <out folder>` writes 27 themed banks, `000001` to `000027`, to merge into `sysex/voice/`. Bank 1 on the box is the firmware's built-in set only while no `000001_*.syx` is on the card.
 
 **6. Power up.** Put the card in the Pi and switch on. You land on VOICE for TG 1. Hold key 10 to hear a note. After uploading banks over FTP or by hand, reboot: MiniDexed reads bank files only at start-up. The [walkthrough](docs/walkthrough.md) takes you through the rest.
 
