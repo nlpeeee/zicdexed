@@ -111,6 +111,15 @@ void SoundHub::sync(int tg)
 	uint8_t cur[kVoiceSize];
 	syn_->readVoice(tg, cur);
 	if (known_[tg] && memcmp(cur, echo_[tg], kVoiceSize) == 0) return;
+	// Differences confined to muted operators' levels are our own mute, not a foreign voice.
+	if (known_[tg] && sess_[tg].opMuteMask()) {
+		zd::Voice a, b;
+		memcpy(a.d, cur, kVoiceSize);
+		memcpy(b.d, echo_[tg], kVoiceSize);
+		for (int o = 0; o < 6; o++)
+			if (sess_[tg].opMuted(o)) { a.op(o, zd::OP_OL) = 0; b.op(o, zd::OP_OL) = 0; }
+		if (memcmp(a.d, b.d, kVoiceSize) == 0) return;
+	}
 	// The synth's voice is not the one we last left there: take it as the new
 	// stored and edit voice. Nothing is pushed back.
 	zd::Voice v;
