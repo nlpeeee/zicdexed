@@ -10,7 +10,7 @@ The 4 encoders sit **above** the screen and the 12 keys sit **below** it. So the
 |---|---|---|
 | Encoder lanes | top 44 px | One lane per knob, directly under it: label, big value, value bar (bipolar ones grow from the centre). Turning a knob lights its lane up solid for a moment, which is the "you touched this" feedback |
 | Picture | middle ~106 px | Each page's hero visual: voice name with a live scope, algorithm, operators, envelope, LFO, mixer strips |
-| Key labels | bottom 16 px | Labels for the top key row (q w e r), the row nearest the screen. Dots show sub-pages |
+| Key labels | bottom 16 px | Labels for the top key row (keys 1 to 4), the row nearest the screen. Dots show sub-pages |
 
 ## 2. Colour and type
 
@@ -81,5 +81,5 @@ Unchanged from v1:
 1. **Hardware:** all 12 keys and all 4 encoders with acceleration.
 2. **UI framework:** lanes, key-label band, the VOICE and MIX pages, and COMPARE/PLAY. This is the first flashable build.
 3. **Sound-design pages:** FM, OPS and envelope, plus the macros and MUTATE.
-4. **BROWSE, KEYS and the Shift map.** The stock menu stays as a fallback under Shift+v.
+4. **BROWSE, KEYS and the Shift map.** The stock menu stays as a fallback under Shift+key 12.
 5. **MOD page,** then the optional GRIT effect.
