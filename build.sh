@@ -62,8 +62,12 @@ else
 	RPI=3 ./build.sh
 fi
 
-# an empty performance folder: Shift+f (SAVE PERFORMANCE) is refused without it on the card
-rm -rf "$OUT"; mkdir -p "$OUT" "$OUT"/performance
+# the stock MiniDexed performance banks (performance/ in this repo, without its
+# README); Shift+8 (SAVE PERFORMANCE) also needs the folder to exist on the card
+rm -rf "$OUT"; mkdir -p "$OUT"/performance
+for b in "$ROOT"/performance/*/; do
+	cp -r "$b" "$OUT"/performance/
+done
 cp src/kernel8.img "$OUT"/
 cp "$ROOT"/config/minidexed.ini "$ROOT"/config/performance.ini "$OUT"/
 cp -r "$ROOT"/sysex "$OUT"/

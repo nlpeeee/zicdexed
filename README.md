@@ -58,7 +58,7 @@ Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS, SPI mode 
 
 1. Format an SD card as FAT32 and copy a MiniDexed release onto it.
 2. Build with `./build.sh` (see [Building](#building)), then copy `kernel8.img` and `minidexed.ini` from `out/` to the card root.
-3. Merge `out/sysex/voice/` into the card's `sysex/voice/` and copy the empty `performance` folder. Details in [SD card](#sd-card).
+3. Merge `out/sysex/voice/` into the card's `sysex/voice/` and `out/performance/` into the card's `performance/`, without overwriting files already on the card. Details in [SD card](#sd-card).
 4. Power up. You land on VOICE for TG 1. Hold key 10 to hear it.
 
 ## Repo layout
@@ -71,6 +71,7 @@ Pi Zero 2 W, ST7789 1.9" 170x320 on SPI0 (DC GPIO3, RST GPIO17, no CS, SPI mode 
 | `patches/circle/` | Circle patch (ST7789 170x320 row offset) |
 | `patches/minidexed/` | MiniDexed hooks (ini keys, serial MIDI switch, UI hand-over, meters) |
 | `config/minidexed.ini` | Settings for the ZicPixel |
+| `performance/` | The stock MiniDexed performance banks (GPL-3.0, see [performance/README.md](performance/README.md)), copied to `out/performance/` |
 | `sysex/voice/` | Extra voice banks (`000090_nasty.syx`: 32 DnB/electro patches). The stock Yamaha banks are not shipped: `python3 tools/stock_banks.py <Dexed cart dir> <out>` builds them as banks 1-27 with themed names. Bank 1 shown on the device is the firmware's built-in set only while no `000001_*.syx` is on the card |
 | `tools/` | `fontgen.py` (Inter to bitmaps), `mockups/` (design renders), `sim/` (PC simulator), `hostsim/` ([UI on a fake SD card](docs/simulator.md)), `nasty_makebank.py`, `stock_banks.py` |
 | `tests/ui/` | Host tests: `make -C tests/ui test` |
@@ -85,7 +86,7 @@ Needs the Arm GNU toolchain 13.3.rel1 `aarch64-none-elf` on `PATH`, then `./buil
 2. Copy `kernel8.img` and `minidexed.ini` from `out/` onto the card root. This replaces the two files with the same name, which is what you want. Also copy `performance.ini`, the default performance loaded at power-on (the stock MiniDexed "Rock Piano" from 001_Seed, 3 layered TGs on OMNI; its voices are stored inside the file, so it sounds the same whatever banks are on the card). An older `performance.ini` on the card wins over the firmware defaults, so replace it (and delete any stale `000001_nasty.syx` from build 1-3 cards).
 3. **Merge** `out/sysex/voice/` into the card's `sysex/voice/`. Never replace the folder: the stock banks live there. MiniDexed numbers banks from the 6-digit prefix of the file name, so a file with the same number as a stock bank hides it. The nasty bank uses 000090 for that reason, and SAVE VOICE writes bank 99.
 4. If the stock banks have been lost or overwritten, rebuild them from your Dexed cartridge collection: `python3 tools/stock_banks.py <Dexed cart folder> <out folder>` writes 000001-000027 with themed names (Yamaha ROM3/ROM4 and VRC-101 to VRC-112). Copy them into `sysex/voice/`. The Yamaha banks are not stored in this repo.
-5. Copy the empty `performance` folder from `out/` to the card root. SAVE PERFORMANCE needs it.
+5. **Merge** `out/performance/` into the card's `performance/` folder (create it if the card has none). It holds the stock MiniDexed performance banks (001_Seed, 002_Greenhouse, 003_Oasis, 128_Laboratory). Never replace the folder, and never overwrite files that are already there: performances you saved with Shift+8 or the stock menu have the same kind of names. Copy without overwriting, e.g. on Windows `robocopy out\performance X:\performance /E /XC /XN /XO` (X: = the card), on Linux/macOS `cp -rn out/performance/. /path/to/card/performance/`. SAVE PERFORMANCE needs the folder.
 6. For WiFi, add a `firmware` folder and `wpa_supplicant.conf` as described in [docs/wifi.md](docs/wifi.md). Without them, set `NetworkEnabled=0` in `minidexed.ini`.
 
 MIDI comes in over USB (USB host keyboard, or `USBGadget=1` to play from a PC), or over WiFi with AppleMIDI/RTP-MIDI once networking is turned on. Setup and firmware updates over WiFi are in [docs/wifi.md](docs/wifi.md).

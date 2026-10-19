@@ -146,7 +146,7 @@ There are two things you can save, and they hold different things.
 | What it is | One sound (the DX7 voice, including operator, LFO, pitch EG, algorithm, transpose and name) | The whole box: all 8 TGs' voices (edits included), bank and program, MIDI channels, volume, pan, reverb sends, cutoff, resonance, detune, mono, portamento, pitch bend, plus the shared reverb and compressor |
 | Save | **Shift + key 7** (SAVE VCE), which opens a naming screen | **Shift + key 8** (SAVE PRF) |
 | Goes to | The user bank `sysex/voice/000099_ZICUSER.syx` (bank 99) | The current performance. Out of the box that is the default one, `performance.ini` on the card |
-| Needs | Nothing special | An empty **`performance`** folder at the card root (the builds ship one). Without it you get "NO PERFORMANCE FOLDER ON SD" |
+| Needs | Nothing special | A **`performance`** folder at the card root (the builds ship one with the stock MiniDexed banks; merge it into the card's folder without overwriting files already there). Without it you get "NO PERFORMANCE FOLDER ON SD" |
 | Comes back | In BROWSE: bank "ZICUSER" | By itself at **power-on** (the default performance loads at boot), or from BROWSE with key 2 (PERFS) |
 
 ### Saving a voice
