@@ -148,6 +148,49 @@ int main()
 		r.shiftPress(K_C);                           // revert
 		CHECK(r.live().op(0, zd::OP_OL) != edited.op(0, zd::OP_OL));
 	}
+	{	// Shift+key 11: undo the last INIT / MUTATE first, then REVERT; the dirty state follows
+		Rig r;
+		r.press(K_W);
+		Ctx c = r.ui.ctx();
+		zd::Voice orig = r.live();
+		CHECK(!SoundDesignDirty(c));
+		r.turn(1, 2);                                // a hand edit
+		zd::Voice tweaked = r.live();
+		CHECK(SoundDesignDirty(c));
+		r.shiftPress(K_Q);                           // INIT
+		CHECK(r.live() == zd::Voice::Init());
+		r.shiftPress(K_C);                           // undo the INIT: the tweaked voice is back
+		CHECK(r.live() == tweaked && SoundDesignDirty(c));
+		r.shiftPress(K_C);                           // nothing left to undo: revert
+		CHECK(r.live() == orig && !SoundDesignDirty(c));
+		r.shiftPress(K_C);                           // clean: nothing to do
+		CHECK(r.live() == orig);
+		for (int i = 0; i < 10 && r.live() == orig; i++) r.shiftPress(K_W);
+		zd::Voice m1 = r.live();
+		r.shiftPress(K_W);
+		r.shiftPress(K_C);                           // undo only the last mutate
+		CHECK(r.live() == m1);
+		r.shiftPress(K_C);
+		CHECK(r.live() == orig);
+	}
+	{	// COMPARE and REVERT use the voice that was saved, not the bank slot's voice
+		Rig r;
+		r.press(K_E);
+		r.turn(1, -10);
+		r.shiftPress(K_D);
+		r.press(K_E);                                // key 3: save the edit voice
+		CHECK(r.syn.userSaves >= 1);
+		zd::Voice saved = r.live();
+		Ctx c = r.ui.ctx();
+		CHECK(!SoundDesignDirty(c));                 // saved: not dirty any more
+		r.turn(1, -10);
+		CHECK(SoundDesignDirty(c));
+		r.down(K_C);
+		CHECK(r.live() == saved);                    // hears what was saved
+		r.up(K_C);
+		r.shiftPress(K_C);                           // revert goes back to it too
+		CHECK(r.live() == saved && !SoundDesignDirty(c));
+	}
 	{	// BROWSE: preview on turn, v cancels, c loads
 		Rig r;
 		zd::Voice orig = r.live();
@@ -210,6 +253,9 @@ int main()
 		r.shiftPress(K_D);
 		CHECK(r.ui.slot() == SLOT_FM);
 		r.syn.userStatus = 1;
+		r.shiftPress(K_F);                           // op 1 is still muted: the performance is not saved
+		CHECK(r.syn.perfSaves == 0);
+		r.shiftPress(K_E);                           // unmute
 		r.shiftPress(K_F);
 		CHECK(r.syn.perfSaves == 1);
 	}

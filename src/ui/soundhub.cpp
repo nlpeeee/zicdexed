@@ -118,6 +118,7 @@ void SoundHub::sync(int tg)
 	zd::EditSession& s = sess_[tg];
 	s.setSink(nullptr);
 	s.load(v);
+	if (!known_[tg]) s.clearUndo();     // first sight of this TG: nothing before it to undo to
 	s.clearOpMute();
 	s.setSink(&d_->sink[tg]);
 	memcpy(echo_[tg], cur, kVoiceSize);
@@ -132,15 +133,77 @@ void SoundHub::settle(int tg)
 
 // ---- Shift+q / w / e ------------------------------------------------------------
 
+bool SoundDesignDirty(Ctx& c)
+{
+	SoundHub& h = SoundHub::get();
+	h.bind(c);
+	return h.session().dirty();
+}
+
+// COMPARE plays the session's stored voice, so it is right even after SAVE VOICE
+// (the TG's bank slot may not hold that voice).
+bool SoundDesignCompare(Ctx& c, int tg, bool begin)
+{
+	SoundHub& h = SoundHub::get();
+	h.bind(c);
+	if (begin) h.session(tg).compareBegin(); else h.session(tg).compareEnd();
+	h.settle(tg);
+	return true;
+}
+
+namespace {
+
+// SAVE PERFORMANCE stores what the synth plays: a muted operator (level 0) would be saved silent.
+bool refuseMutedSave(Ctx& c)
+{
+	SoundHub& h = SoundHub::get();
+	const int n = c.syn.tgCount();
+	for (int tg = 0; tg < n && tg < kMaxTG; tg++) {
+		const uint8_t m = h.session(tg).opMuteMask();
+		if (!m) continue;
+		int op = 0;
+		while (!((m >> op) & 1)) op++;
+		char msg[32] = "";
+		if (tg != c.tg) { copyStr(msg, "TG ", sizeof msg); fmtInt(msg + 3, tg + 1); strcat(msg, " "); }
+		strcat(msg, "OP ");
+		fmtInt(msg + strlen(msg), op + 1);
+		strcat(msg, tg != c.tg ? " MUTED" : " MUTED - UNMUTE FIRST");
+		c.ui.toast(msg);
+		return true;
+	}
+	return false;
+}
+
+} // namespace
+
 bool SoundDesignShiftKey(Ctx& c, int key)
 {
-	if (key != K_Q && key != K_W && key != K_E && key != K_R && key != K_D && key != K_F) return false;
+	if (key != K_Q && key != K_W && key != K_E && key != K_R && key != K_D && key != K_F && key != K_C) return false;
 	if (key == K_R) { c.ui.gotoSub(SLOT_MOD, 2); return true; }       // FX
 	SoundHub& h = SoundHub::get();
 	h.bind(c);
 	zd::EditSession& s = h.session();
 	if (key == K_D) { OpenSaveScreen(c); return true; }              // SAVE VOICE: name it, then save
+	if (key == K_C) {                                                // UNDO the last INIT/MUTATE/load, then REVERT
+		static const char* const kUndone[] = { "", "UNDID INIT", "UNDID MUTATE", "UNDID LOAD" };
+		const zd::EditSession::UndoKind k = s.undo();
+		if (k != zd::EditSession::UNDO_NONE) {
+			char msg[32];
+			copyStr(msg, kUndone[k], sizeof msg);
+			if (s.dirty()) strcat(msg, " - AGAIN = REVERT");
+			c.ui.toast(msg);
+		} else if (s.dirty()) {
+			s.revert();
+			c.ui.toast("REVERTED");
+		} else {
+			c.ui.toast("NOTHING TO REVERT");
+		}
+		h.settle(c.tg);
+		c.ui.redrawAll();
+		return true;
+	}
 	if (key == K_F) {                                                // SAVE PERFORMANCE
+		if (refuseMutedSave(c)) return true;
 		c.ui.toast(c.syn.savePerformance() ? "PERFORMANCE SAVED" : "NO PERFORMANCE FOLDER ON SD");
 		return true;
 	}

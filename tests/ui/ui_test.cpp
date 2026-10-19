@@ -81,15 +81,15 @@ int main()
 		r.turn(2, 5); CHECK(r.syn.get(P_PAN, 1) == 55);
 		CHECK(r.ui.slot() == SLOT_MIX);
 	}
-	{	// PLAY holds a note; COMPARE holds the stored voice; Shift+c reverts
+	{	// PLAY holds a note; COMPARE holds the stored voice; Shift+c undoes/reverts
 		Rig r;
 		r.down(K_X); CHECK(r.syn.held[0]);
 		r.up(K_X); CHECK(!r.syn.held[0]);
 		r.down(K_X); r.press(K_S); r.up(K_X);          // moving to another TG while held still releases the right note
 		CHECK(!r.syn.held[0] && !r.syn.held[1]);
-		r.down(K_C); CHECK(r.syn.compares == 1);
-		r.up(K_C); CHECK(r.syn.compares == 0);
-		r.down(K_Z); r.press(K_C); r.up(K_Z); CHECK(r.syn.reverts == 1);
+		// with the sound pages registered COMPARE and REVERT run on the edit session (see sound_test)
+		r.down(K_C); r.up(K_C);
+		r.down(K_Z); r.press(K_C); r.up(K_Z);
 	}
 	{	// long v = panic; short v = exit; Shift+v = menu
 		Rig r;

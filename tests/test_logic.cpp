@@ -356,6 +356,36 @@ static void test_session()
 	s.revert();
 	CHECK(s.edit() == v);
 
+	// UNDO: one slot for INIT / MUTATE / load; a save or (for a load) a tweak clears it
+	s.clearUndo();
+	CHECK(s.undo() == EditSession::UNDO_NONE);
+	s.setParam(G_FB, 3);
+	Voice tweaked = s.edit();
+	s.init();
+	CHECK(s.undoKind() == EditSession::UNDO_INIT && s.edit() == Voice::Init());
+	CHECK(s.undo() == EditSession::UNDO_INIT && s.edit() == tweaked && sink.last == tweaked);
+	CHECK(s.undo() == EditSession::UNDO_NONE);
+	s.mutate(100);
+	CHECK(s.undoKind() == EditSession::UNDO_MUTATE);
+	s.compareBegin();
+	CHECK(s.undo() == EditSession::UNDO_NONE);       // locked while COMPARE is held
+	s.compareEnd();
+	CHECK(s.undo() == EditSession::UNDO_MUTATE && s.edit() == tweaked);
+	s.mutate(100);
+	s.markSaved();
+	CHECK(s.undoKind() == EditSession::UNDO_NONE);
+	s.revert();
+	Voice other = Voice::Init(); other.set(G_FB, 6);
+	s.load(other);
+	CHECK(s.undoKind() == EditSession::UNDO_LOAD && !s.dirty());
+	s.setParam(G_FB, 2);
+	CHECK(s.undoKind() == EditSession::UNDO_NONE);   // tweaked after the load: nothing to jump back to
+	s.load(v);
+	s.load(other);
+	CHECK(s.undo() == EditSession::UNDO_LOAD && s.edit() == v && s.stored() == v && !s.dirty());
+	s.load(v);                                       // loading the voice that is already there is not undoable
+	CHECK(s.undoKind() == EditSession::UNDO_NONE);
+
 	// macros: set, bake on direct edit, return-to-zero
 	s.setMacro(M_SNARL, 99);
 	CHECK(s.edit().feedback() == 7);

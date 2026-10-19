@@ -33,7 +33,7 @@ Keys are numbered 1-12, top left to bottom right.
 ```
  1 INIT     2 MUTATE   3 OP MUTE   4 FX
  5 TG MUTE  6 TG SOLO  7 SAVE VCE  8 SAVE PRF
- 9 (held)   10 KEYS    11 REVERT   12 MENU
+ 9 (held)   10 KEYS    11 UNDO     12 MENU
 ```
 
 - **Page keys** jump straight to a page, so there's no cycling. Pressing a page key again moves through its sub-pages:

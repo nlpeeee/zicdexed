@@ -9,6 +9,7 @@ const Color kTGColor[kMaxTG] = {
 	0xBEFF28, 0xFF6E1E, 0x28D2FF, 0xFF3C96, 0xFFDC28, 0x966EFF, 0x3CF0AA, 0xFF4646,
 };
 
+static const Color WARN = 0xFFB020;   // the dirty dot
 static const char* const kSlotNames[kSlotCount] = { "VOICE", "FM", "OPS", "MOD", "BROWSE", "MIX", "KEYS", "SAVE" };
 // The key label of the active page names the sub-page it is on, so MOD reads FX when you are on FX.
 static const char* subLabel(Slot s, int sub, int count)
@@ -29,7 +30,7 @@ struct KeyDef { const char* shifted; const char* normal; };
 static const KeyDef kKeyDefs[kKeyCount] = {
 	{ "INIT", "voice" },     { "MUTATE", "fm" },       { "OP MUTE", "ops" },    { "FX", "mod" },
 	{ "TG MUTE", "< tg" },   { "TG SOLO", "tg >" },    { "SAVE VCE", "browse" }, { "SAVE PRF", "mix" },
-	{ "SHIFT", "shift" },    { "KEYS", "play" },       { "REVERT", "compare" }, { "MENU", "exit" },
+	{ "SHIFT", "shift" },    { "KEYS", "play" },       { "UNDO", "compare" }, { "MENU", "exit" },
 };
 
 static void upper(char* dst, const char* src, int n)
@@ -135,6 +136,7 @@ void Ui::gotoSub(Slot s, int sub)
 void Ui::drawLane(int i)
 {
 	Ctx c = ctx();
+	if (i == 3) dirty_ = SoundDesignDirty(c);
 	LaneView v{};
 	if (page()) page()->lane(c, sub_[slot_], i, v);
 	shown_[i] = v;
@@ -167,6 +169,7 @@ void Ui::drawLane(int i)
 		if (w < 2) w = 2;
 		g_.roundRect((float)bx, (float)by, w, 3, 1, hot ? INK : a);
 	}
+	if (i == 3 && dirty_) g_.roundRect((float)(W - 10), 4, 6, 6, 3, hot ? INK : WARN);
 	if (i && !hot && !(touchedMs_[i - 1] != 0 && now_ - touchedMs_[i - 1] < 600)) g_.vline(x, 6, 32, LINE);
 }
 
@@ -176,13 +179,15 @@ void Ui::refreshLanes(bool force)
 {
 	if (!page()) return;
 	Ctx c = ctx();
+	const bool dirtyNow = SoundDesignDirty(c);
 	for (int i = 0; i < 4; i++) {
 		LaneView v{};
 		page()->lane(c, sub_[slot_], i, v);
 		bool hot = touchedMs_[i] != 0 && now_ - touchedMs_[i] < 600;
 		if (!hot && touchedMs_[i]) touchedMs_[i] = 0;
 		bool same = !force && hot == shownHot_[i] && !strcmp(v.label, shown_[i].label) && !strcmp(v.text, shown_[i].text)
-		            && (int)(v.frac * 66) == (int)(shown_[i].frac * 66) && v.bipolar == shown_[i].bipolar;
+		            && (int)(v.frac * 66) == (int)(shown_[i].frac * 66) && v.bipolar == shown_[i].bipolar
+		            && (i != 3 || dirtyNow == dirty_);
 		if (!same) drawLane(i);
 	}
 }
@@ -334,7 +339,8 @@ void Ui::key(int k, bool down, uint32_t nowMs)
 		if (page()) page()->key(c, sub_[slot_], k, false);
 		if (k == K_X && playing_) { syn_.noteOff(playTG_, playNote_); playing_ = false; }
 		if (k == K_C && comparing_) {
-			syn_.compareEnd(compareTG_);
+			Ctx cc = ctx();
+			if (!SoundDesignCompare(cc, compareTG_, false)) syn_.compareEnd(compareTG_);
 			comparing_ = false;
 			clearToast();
 			redrawAll();
@@ -366,7 +372,8 @@ void Ui::normalKey(int k)
 		if (!comparing_) {
 			comparing_ = true;
 			compareTG_ = tg_;
-			syn_.compareBegin(tg_);
+			Ctx cc = ctx();
+			if (!SoundDesignCompare(cc, tg_, true)) syn_.compareBegin(tg_);
 			toast("COMPARE - STORED VOICE", 0);
 			redrawAll();
 		}
@@ -391,7 +398,7 @@ void Ui::shiftKey(int k)
 	case K_D: { Ctx c = ctx(); if (!SoundDesignShiftKey(c, k)) toast("SAVE VOICE - NOT IN THIS BUILD"); break; }
 	case K_F: { Ctx c = ctx(); if (!SoundDesignShiftKey(c, k)) toast("SAVE PERFORMANCE - NOT IN THIS BUILD"); break; }
 	case K_X: gotoSlot(SLOT_KEYS); break;
-	case K_C: syn_.revert(tg_); toast("REVERTED"); redrawAll(); break;
+	case K_C: { Ctx c = ctx(); if (!SoundDesignShiftKey(c, k)) { syn_.revert(tg_); toast("REVERTED"); redrawAll(); } break; }
 	case K_V: menuReq_ = true; suspended_ = true; break;
 	default: break;
 	}

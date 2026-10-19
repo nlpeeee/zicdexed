@@ -16,6 +16,13 @@ Page* CreateMixPage();     // f: the eight channel strips
 // A weak default in zicregistry.cpp is replaced by the sound-design pages.
 bool SoundDesignShiftKey(Ctx& c, int key);
 
+// Shift+11 (UNDO, then REVERT) is handled by SoundDesignShiftKey too.
+// True while the TG's edit voice differs from the stored one (drives the dirty dot).
+bool SoundDesignDirty(Ctx& c);
+// COMPARE (key 10, hold): the voice to hear is the session's stored voice. Returns false when
+// not handled, then the framework falls back to ISynth::compareBegin/End.
+bool SoundDesignCompare(Ctx& c, int tg, bool begin);
+
 // Shift+7: opens the naming screen (SLOT_SAVE) for the current TG's edit voice.
 // Toasts and returns false when the user bank cannot be used.
 bool OpenSaveScreen(Ctx& c, int preferSlot = -1);   // preferSlot: user-bank slot to overwrite by default
