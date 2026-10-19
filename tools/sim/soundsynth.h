@@ -85,13 +85,33 @@ struct SoundSynth : FakeSynth {
 		userSaves++; lastUserSlot = slot;
 		return slot;
 	}
-	// performances 1, 2, 4, 5 and 8 exist (ids 0, 1, 3, 4, 7)
-	int perfCurrent = 0, perfLoads = 0, lastPerfLoaded = -1;
-	int performanceLast() override { return 7; }
-	bool performanceValid(int id) override { return id == 0 || id == 1 || id == 3 || id == 4 || id == 7; }
-	void performanceName(int id, char out[32]) override { snprintf(out, 32, id == 0 ? "Default" : "Perf %d", id + 1); }
+	// Three performance banks (ids 0, 1 and 3; bank 2 is missing). Bank 0 holds
+	// performances 1, 2, 4, 5 and 8 (ids 0, 1, 3, 4, 7), bank 1 holds ids 0 and 2, bank 3 just id 5.
+	int perfCurrent = 0, perfLoads = 0, lastPerfLoaded = -1, perfBank = 0, perfBankHome = 0, perfBankSwitches = 0;
+	bool perfIgnore = false;         // true: loadPerformance() is accepted but never takes effect
+	int perfBankDelay = 0;           // >0: the switch only completes after this many performanceBank() calls
+	int pendingBank = -1;
+	static bool inBank(int bank, int id)
+	{
+		if (bank == 0) return id == 0 || id == 1 || id == 3 || id == 4 || id == 7;
+		if (bank == 1) return id == 0 || id == 2;
+		if (bank == 3) return id == 5;
+		return false;
+	}
+	int performanceLast() override { return perfBank == 0 ? 7 : (perfBank == 1 ? 2 : 5); }
+	bool performanceValid(int id) override { return inBank(perfBank, id); }
+	void performanceName(int id, char out[32]) override { snprintf(out, 32, "B%d Perf %d", perfBank + 1, id + 1); }
 	int performanceCurrent() override { return perfCurrent; }
-	bool loadPerformance(int id) override { perfLoads++; lastPerfLoaded = id; perfCurrent = id; return true; }
+	bool loadPerformance(int id) override { perfLoads++; lastPerfLoaded = id; if (!perfIgnore) perfCurrent = id; perfBankHome = perfBank; return true; }
+	int performanceBankCount() override { return 4; }
+	bool performanceBankValid(int b) override { return b == 0 || b == 1 || b == 3; }
+	void performanceBankName(int b, char out[32]) override { snprintf(out, 32, b == 0 ? "Seed" : (b == 1 ? "Acid" : "Keys")); }
+	int performanceBank() override
+	{
+		if (pendingBank >= 0 && --perfBankDelay <= 0) { perfBank = pendingBank; pendingBank = -1; }
+		return perfBank;
+	}
+	bool selectPerformanceBank(int b) override { perfBankSwitches++; pendingBank = b; if (perfBankDelay <= 0) { perfBank = b; pendingBank = -1; } return true; }
 	int getFx(FxParam p) override { return fx[p]; }
 	int bankCount() override { return 99; }
 	bool bankValid(int b) override { return (b >= 0 && b < 4 && b != 2) || b == 98; }

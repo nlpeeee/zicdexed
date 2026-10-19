@@ -377,6 +377,81 @@ int main()
 		r.press(K_C);
 		CHECK(r.syn.lastPerfLoaded == 1);
 	}
+	{	// BROWSE performance banks: encoder 2 steps through them, nothing loads until key 11
+		Rig r;
+		r.press(K_D); r.press(K_W);
+		CHECK(r.syn.perfBank == 0);
+		r.turn(1, 1);                                // bank 1 (Acid): ids 0 and 2
+		CHECK(r.syn.perfBank == 1 && r.syn.perfBankSwitches == 1 && r.syn.perfLoads == 0);
+		r.turn(1, 1);                                // bank 2 does not exist: bank 3
+		CHECK(r.syn.perfBank == 3 && r.syn.perfBankSwitches == 2);
+		r.turn(1, 1);                                // no further bank
+		CHECK(r.syn.perfBank == 3 && r.syn.perfBankSwitches == 2);
+		r.press(K_C);                                // loads the only performance of that bank
+		CHECK(r.syn.perfLoads == 1 && r.syn.lastPerfLoaded == 5 && r.syn.perfBankHome == 3);
+		CHECK(r.ui.slot() == SLOT_VOICE && r.syn.perfBank == 3);
+	}
+	{	// leaving without loading puts the synth back on the bank of the loaded performance
+		Rig r;
+		r.press(K_D); r.press(K_W);
+		r.turn(1, 1);
+		CHECK(r.syn.perfBank == 1);
+		r.press(K_W);                                // key 2: back to voices
+		CHECK(r.syn.perfBank == 0 && r.syn.perfLoads == 0);
+		r.press(K_W); r.turn(1, 1);
+		CHECK(r.syn.perfBank == 1);
+		r.press(K_V);                                // key 12: exit
+		CHECK(r.syn.perfBank == 0 && r.syn.perfLoads == 0);
+	}
+	{	// resting on a performance sounds it; key 12 puts the loaded one back, key 11 keeps the previewed one
+		Rig r;
+		r.press(K_D); r.press(K_W);
+		r.turn(0, 1);
+		CHECK(r.syn.perfLoads == 0);                 // still moving: nothing sounds yet
+		r.run(600);
+		CHECK(r.syn.perfLoads == 1 && r.syn.lastPerfLoaded == 1);
+		r.run(400);
+		CHECK(r.syn.perfLoads == 1);                 // once only
+		r.turn(1, 1);                                // other bank: its list is read, then a rest previews
+		r.run(400);
+		CHECK(r.syn.perfBank == 1 && r.syn.perfLoads == 1);
+		r.turn(0, 1);
+		r.run(600);
+		CHECK(r.syn.perfLoads == 2);
+		r.press(K_V);                                // leave: the original (id 0, bank 0) returns
+		CHECK(r.syn.perfBank == 0 && r.syn.perfLoads == 3 && r.syn.lastPerfLoaded == 0);
+		r.press(K_D); r.press(K_W);
+		r.turn(0, 1);
+		r.run(600);
+		const int loads = r.syn.perfLoads;
+		r.press(K_C);                                // keep it: no second load
+		CHECK(r.syn.perfLoads == loads && r.ui.slot() == SLOT_VOICE);
+		r.press(K_D); r.press(K_W);
+		r.press(K_V);
+		CHECK(r.syn.perfLoads == loads);             // the kept one is now the loaded one
+	}
+	{	// a preview the synth never reports is flagged, and the loaded performance stays the marked one
+		Rig r;
+		r.syn.perfIgnore = true;
+		r.press(K_D); r.press(K_W);
+		r.turn(0, 1);
+		r.run(600);
+		CHECK(r.syn.perfLoads == 1);
+		r.run(3500);
+		CHECK(r.ui.toastShown());
+		r.press(K_V);                                // leave (the page keeps its state between rigs)
+	}
+	{	// the synth takes a moment to switch banks: key 11 waits for the new list
+		Rig r;
+		r.syn.perfBankDelay = 3;
+		r.press(K_D); r.press(K_W);
+		r.turn(1, 1);
+		r.press(K_C);                                // too early: ignored
+		CHECK(r.syn.perfLoads == 0); CHECK(r.ui.slot() == SLOT_BROWSE);
+		r.run(400);                                  // the page polls and builds the list
+		r.press(K_C);
+		CHECK(r.syn.perfLoads == 1 && r.syn.lastPerfLoaded == 0 && r.syn.perfBankHome == 1);
+	}
 	{	// Shift+r with the Shift map showing (held past 250 ms), from several starting pages
 		for (int start = 0; start < 4; start++) {
 			Rig r;
