@@ -1,3 +1,4 @@
+*.tar.xz
 build/
 out/
 toolchain/
@@ -9,3 +10,7 @@ tests/ui/shots/
 tests/ui/shots_sound/
 tests/ui/sim_sound
 tests/ui/sound_test
+tests/ui/ui_test
+tests/ui/sim
+tests/ui/shots/
+wpa_supplicant.conf

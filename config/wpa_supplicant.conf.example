@@ -1,0 +1,10 @@
+# Copy to wpa_supplicant.conf in the root of the SD card and fill in your network.
+# Do not commit the real file: it holds your WiFi password.
+# Pi Zero 2 W has a 2.4 GHz radio only.
+country=GB
+
+network={
+	ssid="YourNetworkName"
+	psk="YourPassword"
+	key_mgmt=WPA-PSK
+}
