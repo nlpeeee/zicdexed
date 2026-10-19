@@ -405,7 +405,15 @@ public:
 		hub().ui().tg = c.tg;
 	}
 
-	void leave(Ctx& c, int) override { perf_ = false; cancel(c); }
+	void leave(Ctx& c, int) override { if (perf_) leavePerf(c); cancel(c); }
+	void tick(Ctx& c, int) override
+	{
+		if (perf_ && perfPending_ && c.syn.performanceBank() == perfBank_) {   // the synth has re-read the bank's folder
+			perfPending_ = false;
+			buildPerfList(c, false);
+			c.ui.redrawPicture();
+		}
+	}
 
 	void lane(Ctx& c, int sub, int i, LaneView& out) override
 	{
@@ -417,6 +425,12 @@ public:
 			copyStr(out.label, "Perf", sizeof out.label);
 			fmtInt(out.text, perfN_ ? perfIds_[perfSel_] + 1 : 0);
 			out.frac = frac(perfSel_, 0, perfN_ > 1 ? perfN_ - 1 : 1);
+		} else if (i == 1 && perfBanks_) {
+			copyStr(out.label, "Bank", sizeof out.label);
+			char nm[32];
+			c.syn.performanceBankName(perfBank_, nm);
+			copyStr(out.text, nm, sizeof out.text);
+			out.frac = frac(perfBank_, 0, c.syn.performanceBankCount() > 1 ? c.syn.performanceBankCount() - 1 : 1);
 		} else if (i == 1) {
 			copyStr(out.label, "Count", sizeof out.label);
 			fmtInt(out.text, perfN_);
@@ -432,7 +446,8 @@ public:
 
 	bool turn(Ctx& c, int sub, int i, int steps, bool fine) override
 	{
-		if (perf_) {                                    // only the first encoder moves through the list
+		if (perf_) {                                    // encoder 1 moves through the list, encoder 2 through the banks
+			if (i == 1 && perfBanks_) return stepBank(c, steps > 0 ? 1 : -1);
 			if (i != 0 || !perfN_) return false;
 			perfSel_ += steps;
 			if (perfSel_ < 0) perfSel_ = 0;
@@ -459,18 +474,19 @@ public:
 	{
 		if (!down) return false;
 		if (k == K_W) {                                 // voices <-> performances
-			if (perf_) { perf_ = false; enter(c, 0); }
+			if (perf_) { leavePerf(c); enter(c, 0); }
 			else if (!enterPerf(c)) return true;
 			c.ui.redrawAll();
 			return true;
 		}
 		if (perf_) {
 			if (k == K_C) {                             // LOAD the selected performance
-				if (!perfN_) return true;
+				if (!perfN_ || perfPending_) return true;
 				const int id = perfIds_[perfSel_];
 				if (!c.syn.loadPerformance(id)) { c.ui.toastError("PERFORMANCE NOT LOADED"); return true; }
 				for (int t = 0; t < kMaxTG; t++) hub().forget(t);   // every TG gets a new voice
 				c.ui.toast("PERFORMANCE LOADING");
+				perfHome_ = perfBank_;                  // the loaded performance now lives in the shown bank
 				perf_ = false;
 				c.ui.gotoSlot(SLOT_VOICE);
 				return true;
@@ -543,34 +559,72 @@ private:
 	uint32_t savedMask_ = 0;
 	uint8_t saved_[kMaxTG][kVoiceSize];
 
-	// performance browsing: the valid ids of the card's performance folder
+	// performance browsing: the valid ids of the shown performance bank (a folder under /performance)
 	static constexpr int kMaxPerf = 128;
 	bool perf_ = false;
 	int perfIds_[kMaxPerf];
 	int perfN_ = 0, perfSel_ = 0;
+	bool perfBanks_ = false;         // the synth has performance banks
+	int perfBank_ = 0;               // the bank shown
+	int perfHome_ = 0;               // the bank the loaded performance is in
+	int perfHomeId_ = 0;
+	bool perfPending_ = false;       // waiting for the synth to switch to perfBank_
 
 	bool enterPerf(Ctx& c)
 	{
-		const int last = c.syn.performanceLast();
-		if (last < 0) { c.ui.toast("PERFORMANCES - NOT IN THIS BUILD"); return false; }
+		if (c.syn.performanceLast() < 0) { c.ui.toast("PERFORMANCES - NOT IN THIS BUILD"); return false; }
 		cancel(c);                                      // undo any voice preview first
+		perfBanks_ = c.syn.performanceBankCount() > 0 && c.syn.performanceBank() >= 0;
+		perfBank_ = perfHome_ = perfBanks_ ? c.syn.performanceBank() : 0;
+		perfHomeId_ = c.syn.performanceCurrent();
+		perfPending_ = false;
+		buildPerfList(c, true);
+		perf_ = true;
+		return true;
+	}
+
+	// Back to the bank the loaded performance is in. Browsing banks must not leave
+	// the synth pointing at another bank, or Shift+key 8 would overwrite a performance there.
+	void leavePerf(Ctx& c)
+	{
+		if (perfBanks_ && (perfBank_ != perfHome_ || perfPending_)) c.syn.selectPerformanceBank(perfHome_);
+		perf_ = false;
+		perfPending_ = false;
+	}
+
+	// ids of the shown bank; start on the loaded performance when this is its bank
+	void buildPerfList(Ctx& c, bool atLoaded)
+	{
+		const int last = c.syn.performanceLast();
 		perfN_ = 0;
 		perfSel_ = 0;
-		const int cur = c.syn.performanceCurrent();
 		for (int id = 0; id <= last && id < kMaxPerf; id++) {
 			if (!c.syn.performanceValid(id)) continue;
-			if (id == cur) perfSel_ = perfN_;
+			if (atLoaded && perfBank_ == perfHome_ && id == perfHomeId_) perfSel_ = perfN_;
 			perfIds_[perfN_++] = id;
 		}
-		perf_ = true;
+	}
+
+	bool stepBank(Ctx& c, int dir)
+	{
+		const int n = c.syn.performanceBankCount();
+		int b = perfBank_;
+		do { b += dir; } while (b >= 0 && b < n && !c.syn.performanceBankValid(b));
+		if (b < 0 || b >= n) return false;
+		perfBank_ = b;
+		perfN_ = 0;
+		perfSel_ = 0;
+		perfPending_ = true;
+		c.syn.selectPerformanceBank(b);
 		return true;
 	}
 
 	void drawPerfs(Ctx& c)
 	{
 		Gfx& g = c.g;
-		if (!perfN_) { g.text(8, kListTop + 4, "NO PERFORMANCES ON THE CARD", fBody, GREY); return; }
-		const int cur = c.syn.performanceCurrent();
+		if (perfPending_) { g.text(8, kListTop + 4, "READING BANK...", fBody, GREY); return; }
+		if (!perfN_) { g.text(8, kListTop + 4, perfBanks_ ? "NO PERFORMANCES IN THIS BANK" : "NO PERFORMANCES ON THE CARD", fBody, GREY); return; }
+		const int cur = perfBank_ == perfHome_ ? perfHomeId_ : -1;
 		int first = perfSel_ - kRows / 2;
 		if (first > perfN_ - kRows) first = perfN_ - kRows;
 		if (first < 0) first = 0;

@@ -123,7 +123,8 @@ int main(int argc, char** argv)
 	// BROWSE key 2: performances
 	s.press(K_V);
 	s.press(K_D); s.press(K_W);
-	s.turn(0, 2);
+	s.turn(1, 1);
+	s.turn(0, 1);
 	s.run(2000);
 	dump(s.g, dir, "16_browse_perfs");
 

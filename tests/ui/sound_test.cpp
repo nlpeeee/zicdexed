@@ -377,6 +377,43 @@ int main()
 		r.press(K_C);
 		CHECK(r.syn.lastPerfLoaded == 1);
 	}
+	{	// BROWSE performance banks: encoder 2 steps through them, nothing loads until key 11
+		Rig r;
+		r.press(K_D); r.press(K_W);
+		CHECK(r.syn.perfBank == 0);
+		r.turn(1, 1);                                // bank 1 (Acid): ids 0 and 2
+		CHECK(r.syn.perfBank == 1 && r.syn.perfBankSwitches == 1 && r.syn.perfLoads == 0);
+		r.turn(1, 1);                                // bank 2 does not exist: bank 3
+		CHECK(r.syn.perfBank == 3 && r.syn.perfBankSwitches == 2);
+		r.turn(1, 1);                                // no further bank
+		CHECK(r.syn.perfBank == 3 && r.syn.perfBankSwitches == 2);
+		r.press(K_C);                                // loads the only performance of that bank
+		CHECK(r.syn.perfLoads == 1 && r.syn.lastPerfLoaded == 5 && r.syn.perfBankHome == 3);
+		CHECK(r.ui.slot() == SLOT_VOICE && r.syn.perfBank == 3);
+	}
+	{	// leaving without loading puts the synth back on the bank of the loaded performance
+		Rig r;
+		r.press(K_D); r.press(K_W);
+		r.turn(1, 1);
+		CHECK(r.syn.perfBank == 1);
+		r.press(K_W);                                // key 2: back to voices
+		CHECK(r.syn.perfBank == 0 && r.syn.perfLoads == 0);
+		r.press(K_W); r.turn(1, 1);
+		CHECK(r.syn.perfBank == 1);
+		r.press(K_V);                                // key 12: exit
+		CHECK(r.syn.perfBank == 0 && r.syn.perfLoads == 0);
+	}
+	{	// the synth takes a moment to switch banks: key 11 waits for the new list
+		Rig r;
+		r.syn.perfBankDelay = 3;
+		r.press(K_D); r.press(K_W);
+		r.turn(1, 1);
+		r.press(K_C);                                // too early: ignored
+		CHECK(r.syn.perfLoads == 0 && r.ui.slot() == SLOT_BROWSE);
+		r.run(400);                                  // the page polls and builds the list
+		r.press(K_C);
+		CHECK(r.syn.perfLoads == 1 && r.syn.lastPerfLoaded == 0 && r.syn.perfBankHome == 1);
+	}
 	{	// Shift+r with the Shift map showing (held past 250 ms), from several starting pages
 		for (int start = 0; start < 4; start++) {
 			Rig r;

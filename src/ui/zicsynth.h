@@ -108,6 +108,15 @@ public:
 	virtual void performanceName(int /*id*/, char out[32]) { out[0] = 0; }
 	virtual int performanceCurrent() { return -1; }
 	virtual bool loadPerformance(int /*id*/) { return false; }
+	// Performance banks are sub-folders of the performance folder ("001_Seed").
+	// The performance* calls above describe the bank currently shown (performanceBank).
+	// selectPerformanceBank() only queues the switch: performanceBank() changes once
+	// the synth has re-read that folder, a moment later. It does not load anything.
+	virtual int performanceBankCount() { return 0; }              // highest bank id + 1; 0 = no banks
+	virtual bool performanceBankValid(int /*bank*/) { return false; }
+	virtual void performanceBankName(int /*bank*/, char out[32]) { out[0] = 0; }
+	virtual int performanceBank() { return -1; }
+	virtual bool selectPerformanceBank(int /*bank*/) { return false; }
 
 	// Master output volume, 0..127 (the stock menu's Master Volume).
 	virtual int masterVolume() { return 100; }

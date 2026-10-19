@@ -175,6 +175,17 @@ public:
 	}
 	int performanceCurrent () override { return (int) m_pMini->GetActualPerformanceID (); }
 	bool loadPerformance (int id) override { return m_pMini->SetNewPerformance ((unsigned) id); }
+	int performanceBankCount () override { return (int) m_pMini->GetLastPerformanceBank () + 1; }
+	bool performanceBankValid (int bank) override { return bank >= 0 && m_pMini->GetPerformanceConfig ()->IsValidPerformanceBank ((unsigned) bank); }
+	void performanceBankName (int bank, char out[32]) override
+	{
+		std::string s = m_pMini->GetPerformanceConfig ()->GetPerformanceBankName ((unsigned) bank);
+		unsigned n = 0;
+		for (; n < s.size () && n < 31; n++) out[n] = (s[n] >= 32 && s[n] < 127) ? s[n] : ' ';
+		out[n] = 0;
+	}
+	int performanceBank () override { return (int) m_pMini->GetPerformanceBank (); }
+	bool selectPerformanceBank (int bank) override { return m_pMini->SetNewPerformanceBank ((unsigned) bank); }
 
 	bool savePerformance () override { return m_pMini->SavePerformance (false); }
 	int saveVoice (const uint8_t v[kVoiceSize]) override { return SaveVoiceToUserBank (v); }
