@@ -10,7 +10,7 @@ The 4 encoders sit **above** the screen and the 12 keys sit **below** it. So the
 |---|---|---|
 | Encoder lanes | top 44 px | One lane per knob, directly under it: label, big value, value bar (bipolar ones grow from the centre). Turning a knob lights its lane up solid for a moment, which is the "you touched this" feedback |
 | Picture | middle ~106 px | Each page's hero visual: voice name with a live scope, algorithm, operators, envelope, LFO, mixer strips |
-| Key labels | bottom 16 px | Labels for the top key row (keys 1 to 4), the row nearest the screen. Dots show sub-pages |
+| Key labels | bottom 16 px | Labels for the top key row (keys 1-4), the row nearest the screen. Dots show sub-pages |
 
 ## 2. Colour and type
 
@@ -25,7 +25,7 @@ The 4 encoders sit **above** the screen and the 12 keys sit **below** it. So the
  5 < TG     6 TG >     7 BROWSE    8 MIX
  9 SHIFT    10 PLAY    11 COMPARE  12 EXIT
 
-Keys are numbered 1 to 12, left to right and top to bottom.
+Keys are numbered 1-12, top left to bottom right.
 ```
 
 **With Shift held,** the screen turns into a live map of these (mockup 09):

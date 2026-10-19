@@ -364,7 +364,7 @@ def page_browse(cv, sel=2):
         cv.text(30, y, name, BODY, INK if i == sel else (WHITE if abs(i - sel) == 1 else GREY))
         if i == sel:
             cv.text(200, y + 1, "playing preview", SMALL, INK, "right", 110)
-    footer(cv, labels=["VOICES", "PERFS", "", "LOAD (c)"], page=0)
+    footer(cv, labels=["VOICES", "PERFS", "", "LOAD (11)"], page=0)
 
 
 def page_keys(cv):
@@ -378,8 +378,8 @@ def page_keys(cv):
         root = n == "C"
         cv.rect(x, y, kw, kh, cv.a if pressed else PANEL, r=6, outline=dk(cv.a, 0.6) if root and not pressed else None)
         cv.text(x, y + 6, n, BIG, INK if pressed else WHITE, "center", kw)
-        cv.text(x + 6, y + 3, "qwerasdf"[i], LBL, INK if pressed else DIM)
-    footer(cv, labels=["", "", "", "EXIT (v)"])
+        cv.text(x + 6, y + 3, str(i + 1), LBL, INK if pressed else DIM)
+    footer(cv, labels=["", "", "", "EXIT (12)"])
 
 
 SHIFT = [
@@ -405,7 +405,7 @@ def page_shift(cv):
             lab = SHIFT[r][c]
             held = (r, c) == (2, 0)
             cv.rect(x, y, kw, kh, cv.a if held else PANEL, r=5)
-            cv.text(x + 6, y + 3, "qwerasdfzxcv"[r * 4 + c], LBL, INK if held else DIM)
+            cv.text(x + 6, y + 3, str(r * 4 + c + 1), LBL, INK if held else DIM)
             cv.text(x, y + 13, lab, BODY, INK if held else WHITE, "center", kw)
             cv.text(x, y + 26, NORMAL[r][c].lower(), ("Inter-Medium", 9), INK if held else GREY, "center", kw)
 
@@ -443,7 +443,7 @@ def device_frame(img, scale=2):
         for c in range(4):
             x, y = pad + c * kw + 6, ky + r * 92
             d.rounded_rectangle([x, y, x + kw - 12, y + 84], 10, fill=(250, 250, 250), outline=(200, 200, 205))
-            d.text((x + 10, y + 8), "qwerasdfzxcv"[r * 4 + c], fill=(150, 150, 155), font=F("Inter-SemiBold", 14))
+            d.text((x + 10, y + 8), str(r * 4 + c + 1), fill=(150, 150, 155), font=F("Inter-SemiBold", 14))
             d.text((x + 10, y + 56), NORMAL[r][c], fill=(60, 60, 65), font=F("Inter-SemiBold", 14))
     return fr
 

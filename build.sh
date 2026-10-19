@@ -62,7 +62,8 @@ else
 	RPI=3 ./build.sh
 fi
 
-rm -rf "$OUT"; mkdir -p "$OUT"
+# an empty performance folder: Shift+f (SAVE PERFORMANCE) is refused without it on the card
+rm -rf "$OUT"; mkdir -p "$OUT" "$OUT"/performance
 cp src/kernel8.img "$OUT"/
 cp "$ROOT"/config/minidexed.ini "$OUT"/
 cp -r "$ROOT"/sysex "$OUT"/
