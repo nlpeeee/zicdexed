@@ -15,8 +15,8 @@ namespace zic {
 
 // Palette. One hot colour per tone generator; the whole screen takes the
 // current TG's colour.
-constexpr Color BG = 0x060608, PANEL = 0x16171B, LINE = 0x30323A, GREY = 0xB6B8C0,
-                DIM = 0x7C7E86, WHITE = 0xEEEEF0, INK = 0x060608;
+constexpr Color BG = 0x060608, PANEL = 0x16171B, LINE = 0x3C3E46, GREY = 0xE4E6EC,
+                DIM = 0xB0B2BA, WHITE = 0xFFFFFF, INK = 0x060608;
 extern const Color kTGColor[kMaxTG];
 
 class Ui {
