@@ -35,7 +35,8 @@ public:
 	const char* slotName(int s) const { return names_[s]; }
 	bool SlotFree(int s) const { return free_names_[s]; }
 
-	// A name that cannot be saved: blank, or the free-slot marker.
+	bool blank() const;                             // only spaces
+	// A name that cannot be saved to the bank: blank, or the free-slot marker.
 	bool nameOk() const;
 	// Name with trailing spaces removed, for display.
 	void trimmed(char out[kNameLen + 1]) const;

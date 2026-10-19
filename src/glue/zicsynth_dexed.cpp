@@ -50,6 +50,15 @@ public:
 			m_pMini->SetVoiceParameter (kTransposeOffset, (uint8_t) (v + 24), CMiniDexed::NoOP, tg);
 		else
 			m_pMini->SetTGParameter (Map (p), v, tg);
+		if (p == P_BANK || p == P_PROGRAM)
+		{
+			// MiniDexed just loaded this program from its boot-time banks; for the
+			// user bank that is stale after a save, so load the saved voice instead.
+			unsigned bank = m_pMini->GetTGParameter (CMiniDexed::TGParameterVoiceBank, tg);
+			unsigned prog = m_pMini->GetTGParameter (CMiniDexed::TGParameterProgram, tg);
+			uint8_t buf[kVoiceSize];
+			if (UserCopy ((int) bank) && readVoiceIn ((int) bank, (int) prog, buf)) loadVoice (tg, buf);
+		}
 	}
 
 	int getFx (FxParam p) override { return m_pMini->GetParameter (MapFx (p)); }

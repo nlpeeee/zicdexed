@@ -44,14 +44,15 @@ int main()
 		r.turn(3, 7);
 		CHECK(r.syn.get(P_VOLUME, 0) == 107);
 	}
-	{	// page keys: q cycles the VOICE sub-pages; w/e/r/d jump to FM/OPS/MOD/BROWSE
+	{	// page keys: q cycles the VOICE sub-pages (tone, play, mix, rename); w/e/r/d jump to FM/OPS/MOD/BROWSE
 		Rig r;
 		CHECK(r.ui.slot() == SLOT_VOICE && r.ui.sub() == 0);
 		r.press(K_Q); CHECK(r.ui.sub() == 1);
 		r.turn(0, 1); CHECK(r.syn.get(P_MONO, 0) == 1);
 		r.press(K_Q); CHECK(r.ui.sub() == 2);
 		r.turn(3, 1); CHECK(r.syn.get(P_PROGRAM, 0) == 1);   // program steps one voice per click
-		r.press(K_Q); CHECK(r.ui.sub() == 0);
+		r.press(K_Q); CHECK(r.ui.sub() == 3);                // the rename editor; key 4 cancels back to tone
+		r.press(K_R); CHECK(r.ui.sub() == 0);
 		r.press(K_W); CHECK(r.ui.slot() == SLOT_FM);
 		r.press(K_E); CHECK(r.ui.slot() == SLOT_OPS);
 		r.press(K_R); CHECK(r.ui.slot() == SLOT_MOD);

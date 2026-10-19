@@ -106,5 +106,11 @@ int main(int argc, char** argv)
 	s.shiftPress(K_D);
 	s.run(100);
 	dump(s.g, dir, "13_save_overwrite");
+
+	// RENAME: the VOICE page's last sub-page
+	s.press(K_V);
+	s.press(K_Q); s.press(K_Q); s.press(K_Q);
+	s.run(2000);
+	dump(s.g, dir, "14_rename");
 	return 0;
 }

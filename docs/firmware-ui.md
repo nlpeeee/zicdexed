@@ -81,6 +81,8 @@ With `ZicUI=1` the stock `ButtonPin*` and `EncoderEnabled` must be off (the ship
 
 It starts with the current voice's name. Encoder 1 changes the character under the cursor (space, A-Z, 0-9, a-z, then a few symbols), encoder 2 moves the cursor, encoder 4 jumps between character sets. Keys 1 and 2 also move the cursor left and right. Encoder 3 chooses the slot: NEW is the first free slot, or 1 to 32 to overwrite one. A name that already exists in the bank picks its own slot by itself and the screen says OVERWRITES in orange. Key 3 saves and returns to the page you came from, key 4 or key 12 cancels. A blank name, or the name INIT VOICE (which marks a free slot), is refused.
 
+**Rename without saving:** press key 1 on the VOICE page until you reach the fourth sub-page (after tone, play, mix). It is the same editor, but key 3 only renames the voice on the current TG and key 4 cancels back to the tone sub-page. Nothing is written to a bank; use Shift+key 7 for that. Keys 5 and 6 are ignored on both screens so the name always belongs to the TG you started on.
+
 MiniDexed only reads its bank files at boot, so BROWSE is served from a copy kept after each save; the saved voice is there at once. Loading bank 99 by MIDI program change still sees the boot-time contents until the next restart.
 
 The hub keeps one `EditSession` per TG and re-reads the synth's live voice on every entry point, so COMPARE, revert, program changes and SysEx all show up. FM macro amounts reset to 0 when that happens. OP MUTE only silences the sound. SAVE VOICE saves the edit voice, so muted operators are saved at their real level; SAVE PERFORMANCE saves what the synth is playing, so un-mute first.

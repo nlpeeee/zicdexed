@@ -80,11 +80,15 @@ void NameEditor::turnTarget(int steps)
 	manual_ = true;
 }
 
+bool NameEditor::blank() const
+{
+	for (int i = 0; i < kNameLen; i++) if (name_[i] != ' ') return false;
+	return true;
+}
+
 bool NameEditor::nameOk() const
 {
-	bool blank = true;
-	for (int i = 0; i < kNameLen; i++) if (name_[i] != ' ') blank = false;
-	return !blank && memcmp(name_, "INIT VOICE", kNameLen) != 0;
+	return !blank() && memcmp(name_, "INIT VOICE", kNameLen) != 0;
 }
 
 void NameEditor::trimmed(char out[kNameLen + 1]) const
