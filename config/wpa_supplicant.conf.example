@@ -2,8 +2,6 @@
 # Do not commit the real file: it holds your WiFi password.
 # Pi Zero 2 W has a 2.4 GHz radio only.
 country=GB
-update_config=1
-ctrl_interface=/var/run/wpa_supplicant
 
 network={
 	ssid="YourNetworkName"
