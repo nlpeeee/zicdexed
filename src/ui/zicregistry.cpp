@@ -5,6 +5,8 @@
 namespace zic {
 
 __attribute__((weak)) bool SoundDesignShiftKey(Ctx&, int) { return false; }
+__attribute__((weak)) bool SoundDesignDirty(Ctx&) { return false; }
+__attribute__((weak)) bool SoundDesignCompare(Ctx&, int, bool) { return false; }
 
 void RegisterPages(Ui& ui)
 {

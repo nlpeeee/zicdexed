@@ -7,7 +7,7 @@ Pure C++17 logic for the sound-design pages (FM, OPS, ENV, MOD, BROWSE, KEYS, SH
 | `dx7_voice` | 155-byte DX7 voice layout, parameter ranges, algorithm carrier/feedback table, ratio maths |
 | `macros` | Bright, Snarl, Bite, Tail, Vel. Recomputed from a baseline, so returning a macro to 0 restores the voice exactly |
 | `mutate` | MUTATE: seeded random nudge of modulator ratios/levels/envelopes, feedback and detune. Carriers stay audible and in tune |
-| `edit_session` | Stored vs edit voice, COMPARE, REVERT, INIT, MUTATE, OP MUTE, PLAY |
+| `edit_session` | Stored vs edit voice, COMPARE, UNDO, REVERT, INIT, MUTATE, OP MUTE, PLAY |
 | `page_model` | Lane tables (label, value text, bar fraction, encoder turn) for every page |
 | `keys_model` | KEYS page scales and held-note tracking |
 | `browse_model` | BROWSE list window, live preview, load/cancel |

@@ -103,6 +103,7 @@ private:
 	float level_[kMaxTG], meter_[kMaxTG];
 
 	bool playing_, comparing_;
+	bool dirty_ = false;               // the dirty dot in the top right corner is showing
 	int playTG_, playNote_, compareTG_;
 	uint32_t vDownMs_;
 	bool vDown_, vFired_;
