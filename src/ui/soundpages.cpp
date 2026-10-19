@@ -408,6 +408,7 @@ public:
 	void leave(Ctx& c, int) override { if (perf_) leavePerf(c); cancel(c); }
 	void tick(Ctx& c, int) override
 	{
+		if (perf_ && !perfPending_ && perfWait_ > 0 && --perfWait_ == 0) previewPerf(c);
 		if (perf_ && perfPending_ && c.syn.performanceBank() == perfBank_) {   // the synth has re-read the bank's folder
 			perfPending_ = false;
 			buildPerfList(c, false);
@@ -449,9 +450,11 @@ public:
 		if (perf_) {                                    // encoder 1 moves through the list, encoder 2 through the banks
 			if (i == 1 && perfBanks_) return stepBank(c, steps > 0 ? 1 : -1);
 			if (i != 0 || !perfN_) return false;
+			const int before = perfSel_;
 			perfSel_ += steps;
 			if (perfSel_ < 0) perfSel_ = 0;
 			if (perfSel_ > perfN_ - 1) perfSel_ = perfN_ - 1;
+			if (perfSel_ != before) perfWait_ = kPreviewTicks;   // sounds once the highlight rests
 			return true;
 		}
 		prepare(c, sub);
@@ -483,10 +486,12 @@ public:
 			if (k == K_C) {                             // LOAD the selected performance
 				if (!perfN_ || perfPending_) return true;
 				const int id = perfIds_[perfSel_];
-				if (!c.syn.loadPerformance(id)) { c.ui.toastError("PERFORMANCE NOT LOADED"); return true; }
+				const bool sounding = perfSoundBank_ == perfBank_ && perfSoundId_ == id;   // already previewed
+				if (!sounding && !c.syn.loadPerformance(id)) { c.ui.toastError("PERFORMANCE NOT LOADED"); return true; }
 				for (int t = 0; t < kMaxTG; t++) hub().forget(t);   // every TG gets a new voice
 				c.ui.toast("PERFORMANCE LOADING");
 				perfHome_ = perfBank_;                  // the loaded performance now lives in the shown bank
+				perfWait_ = 0;
 				perf_ = false;
 				c.ui.gotoSlot(SLOT_VOICE);
 				return true;
@@ -568,7 +573,10 @@ private:
 	int perfBank_ = 0;               // the bank shown
 	int perfHome_ = 0;               // the bank the loaded performance is in
 	int perfHomeId_ = 0;
-	bool perfPending_ = false;       // waiting for the synth to switch to perfBank_
+	bool perfPending_ = false;
+	static constexpr int kPreviewTicks = 12;   // ~0.5 s of rest before a performance sounds
+	int perfWait_ = 0;
+	int perfSoundBank_ = 0, perfSoundId_ = 0;   // the performance sounding now (the loaded one or a preview)       // waiting for the synth to switch to perfBank_
 
 	bool enterPerf(Ctx& c)
 	{
@@ -577,6 +585,9 @@ private:
 		perfBanks_ = c.syn.performanceBankCount() > 0 && c.syn.performanceBank() >= 0;
 		perfBank_ = perfHome_ = perfBanks_ ? c.syn.performanceBank() : 0;
 		perfHomeId_ = c.syn.performanceCurrent();
+		perfSoundBank_ = perfHome_;
+		perfSoundId_ = perfHomeId_;
+		perfWait_ = 0;
 		perfPending_ = false;
 		buildPerfList(c, true);
 		perf_ = true;
@@ -588,6 +599,11 @@ private:
 	void leavePerf(Ctx& c)
 	{
 		if (perfBanks_ && (perfBank_ != perfHome_ || perfPending_)) c.syn.selectPerformanceBank(perfHome_);
+		if (perfSoundBank_ != perfHome_ || perfSoundId_ != perfHomeId_) {   // a preview is sounding: bring the loaded one back
+			c.syn.loadPerformance(perfHomeId_);         // the synth loads it once the bank switch above is done
+			for (int t = 0; t < kMaxTG; t++) hub().forget(t);
+		}
+		perfWait_ = 0;
 		perf_ = false;
 		perfPending_ = false;
 	}
@@ -605,6 +621,18 @@ private:
 		}
 	}
 
+	// Sound the highlighted performance without keeping it (key 11 keeps it).
+	void previewPerf(Ctx& c)
+	{
+		if (!perfN_) return;
+		const int id = perfIds_[perfSel_];
+		if (id == perfSoundId_ && perfBank_ == perfSoundBank_) return;
+		if (!c.syn.loadPerformance(id)) return;
+		perfSoundBank_ = perfBank_;
+		perfSoundId_ = id;
+		c.ui.redrawPicture();
+	}
+
 	bool stepBank(Ctx& c, int dir)
 	{
 		const int n = c.syn.performanceBankCount();
@@ -615,6 +643,7 @@ private:
 		perfN_ = 0;
 		perfSel_ = 0;
 		perfPending_ = true;
+		perfWait_ = 0;
 		c.syn.selectPerformanceBank(b);
 		return true;
 	}
@@ -624,7 +653,7 @@ private:
 		Gfx& g = c.g;
 		if (perfPending_) { g.text(8, kListTop + 4, "READING BANK...", fBody, GREY); return; }
 		if (!perfN_) { g.text(8, kListTop + 4, perfBanks_ ? "NO PERFORMANCES IN THIS BANK" : "NO PERFORMANCES ON THE CARD", fBody, GREY); return; }
-		const int cur = perfBank_ == perfHome_ ? perfHomeId_ : -1;
+		const int cur = perfBank_ == perfSoundBank_ ? perfSoundId_ : -1;
 		int first = perfSel_ - kRows / 2;
 		if (first > perfN_ - kRows) first = perfN_ - kRows;
 		if (first < 0) first = 0;
@@ -639,7 +668,7 @@ private:
 			c.syn.performanceName(id, nm);
 			const int dist = idx > perfSel_ ? idx - perfSel_ : perfSel_ - idx;
 			g.text(38, y + 1, nm, fBody, sel ? INK : (dist == 1 ? WHITE : GREY));
-			if (id == cur) g.textAligned(160, y + 2, 110, "loaded", fSmall, sel ? INK : c.accent, AL_RIGHT);
+			if (id == cur) g.textAligned(160, y + 2, 110, (perfSoundBank_ == perfHome_ && perfSoundId_ == perfHomeId_) ? "loaded" : "previewing", fSmall, sel ? INK : c.accent, AL_RIGHT);
 		}
 	}
 

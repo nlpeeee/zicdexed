@@ -403,6 +403,33 @@ int main()
 		r.press(K_V);                                // key 12: exit
 		CHECK(r.syn.perfBank == 0 && r.syn.perfLoads == 0);
 	}
+	{	// resting on a performance sounds it; key 12 puts the loaded one back, key 11 keeps the previewed one
+		Rig r;
+		r.press(K_D); r.press(K_W);
+		r.turn(0, 1);
+		CHECK(r.syn.perfLoads == 0);                 // still moving: nothing sounds yet
+		r.run(600);
+		CHECK(r.syn.perfLoads == 1 && r.syn.lastPerfLoaded == 1);
+		r.run(400);
+		CHECK(r.syn.perfLoads == 1);                 // once only
+		r.turn(1, 1);                                // other bank: its list is read, then a rest previews
+		r.run(400);
+		CHECK(r.syn.perfBank == 1 && r.syn.perfLoads == 1);
+		r.turn(0, 1);
+		r.run(600);
+		CHECK(r.syn.perfLoads == 2);
+		r.press(K_V);                                // leave: the original (id 0, bank 0) returns
+		CHECK(r.syn.perfBank == 0 && r.syn.perfLoads == 3 && r.syn.lastPerfLoaded == 0);
+		r.press(K_D); r.press(K_W);
+		r.turn(0, 1);
+		r.run(600);
+		const int loads = r.syn.perfLoads;
+		r.press(K_C);                                // keep it: no second load
+		CHECK(r.syn.perfLoads == loads && r.ui.slot() == SLOT_VOICE);
+		r.press(K_D); r.press(K_W);
+		r.press(K_V);
+		CHECK(r.syn.perfLoads == loads);             // the kept one is now the loaded one
+	}
 	{	// the synth takes a moment to switch banks: key 11 waits for the new list
 		Rig r;
 		r.syn.perfBankDelay = 3;
