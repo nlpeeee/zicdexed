@@ -1,0 +1,5 @@
+worktree:
+  # Gitignored, read-only Arm toolchain linked into each worktree from the main checkout.
+  # build/ and out/ stay per-worktree: build.sh rewrites them, so sharing would collide.
+  sharedDirectories:
+    - toolchain
